@@ -3,6 +3,42 @@
 -- Run this in your Supabase SQL Editor
 -- ============================================
 
+-- Drop existing objects if re-running (safe to ignore errors on first run)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS handle_new_user() CASCADE;
+DROP FUNCTION IF EXISTS get_user_role() CASCADE;
+DROP FUNCTION IF EXISTS update_updated_at() CASCADE;
+
+DROP TABLE IF EXISTS settings CASCADE;
+DROP TABLE IF EXISTS audit_logs CASCADE;
+DROP TABLE IF EXISTS payments CASCADE;
+DROP TABLE IF EXISTS order_items CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS subscription_calendar CASCADE;
+DROP TABLE IF EXISTS subscription_meals CASCADE;
+DROP TABLE IF EXISTS subscriptions CASCADE;
+DROP TABLE IF EXISTS coupons CASCADE;
+DROP TABLE IF EXISTS customer_addresses CASCADE;
+DROP TABLE IF EXISTS delivery_zones CASCADE;
+DROP TABLE IF EXISTS meal_plan_items CASCADE;
+DROP TABLE IF EXISTS meal_plans CASCADE;
+DROP TABLE IF EXISTS meals CASCADE;
+DROP TABLE IF EXISTS categories CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+DROP TYPE IF EXISTS discount_type CASCADE;
+DROP TYPE IF EXISTS payment_transaction_status CASCADE;
+DROP TYPE IF EXISTS order_status CASCADE;
+DROP TYPE IF EXISTS calendar_status CASCADE;
+DROP TYPE IF EXISTS payment_status CASCADE;
+DROP TYPE IF EXISTS subscription_status CASCADE;
+DROP TYPE IF EXISTS duration_type CASCADE;
+DROP TYPE IF EXISTS plan_type CASCADE;
+DROP TYPE IF EXISTS meal_time CASCADE;
+DROP TYPE IF EXISTS meal_type_enum CASCADE;
+DROP TYPE IF EXISTS dietary_tag CASCADE;
+DROP TYPE IF EXISTS user_role CASCADE;
+
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -350,16 +386,16 @@ CREATE POLICY "Admin can manage subscriptions" ON subscriptions FOR ALL USING (g
 
 -- SUBSCRIPTION MEALS policies
 CREATE POLICY "Users can manage own sub meals" ON subscription_meals FOR ALL USING (
-  EXISTS (SELECT 1 FROM subscriptions WHERE id = subscription_id AND user_id = auth.uid()::uuid)
+  EXISTS (SELECT 1 FROM subscriptions s WHERE s.id = subscription_meals.subscription_id AND s.user_id = auth.uid()::uuid)
 );
 CREATE POLICY "Admin can manage sub meals" ON subscription_meals FOR ALL USING (get_user_role() IN ('admin', 'staff'));
 
 -- SUBSCRIPTION CALENDAR policies
 CREATE POLICY "Users can read own calendar" ON subscription_calendar FOR SELECT USING (
-  EXISTS (SELECT 1 FROM subscriptions WHERE id = subscription_id AND user_id = auth.uid()::uuid)
+  EXISTS (SELECT 1 FROM subscriptions s WHERE s.id = subscription_calendar.subscription_id AND s.user_id = auth.uid()::uuid)
 );
 CREATE POLICY "Users can update own calendar" ON subscription_calendar FOR UPDATE USING (
-  EXISTS (SELECT 1 FROM subscriptions WHERE id = subscription_id AND user_id = auth.uid()::uuid)
+  EXISTS (SELECT 1 FROM subscriptions s WHERE s.id = subscription_calendar.subscription_id AND s.user_id = auth.uid()::uuid)
 );
 CREATE POLICY "Admin/staff can manage calendar" ON subscription_calendar FOR ALL USING (get_user_role() IN ('admin', 'staff'));
 
@@ -379,7 +415,7 @@ CREATE POLICY "Kitchen can read today orders" ON orders FOR SELECT USING (
 
 -- ORDER ITEMS policies
 CREATE POLICY "Users can read own order items" ON order_items FOR SELECT USING (
-  EXISTS (SELECT 1 FROM orders WHERE id = order_id AND user_id = auth.uid()::uuid)
+  EXISTS (SELECT 1 FROM orders o WHERE o.id = order_items.order_id AND o.user_id = auth.uid()::uuid)
 );
 CREATE POLICY "Admin/staff can manage order items" ON order_items FOR ALL USING (get_user_role() IN ('admin', 'staff'));
 CREATE POLICY "Kitchen can read order items" ON order_items FOR SELECT USING (get_user_role() = 'kitchen');
