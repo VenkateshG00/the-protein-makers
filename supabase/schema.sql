@@ -304,12 +304,12 @@ ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 -- Helper function to get current user role
 CREATE OR REPLACE FUNCTION get_user_role()
 RETURNS user_role AS $$
-  SELECT role FROM users WHERE id = auth.uid();
+  SELECT role FROM users WHERE id = auth.uid()::uuid;
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- USERS policies
-CREATE POLICY "Users can read own profile" ON users FOR SELECT USING (id = auth.uid());
-CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (id = auth.uid());
+CREATE POLICY "Users can read own profile" ON users FOR SELECT USING (id = auth.uid()::uuid);
+CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (id = auth.uid()::uuid);
 CREATE POLICY "Admin/staff can read all users" ON users FOR SELECT USING (get_user_role() IN ('admin', 'staff'));
 CREATE POLICY "Admin can update any user" ON users FOR UPDATE USING (get_user_role() = 'admin');
 CREATE POLICY "Admin can insert users" ON users FOR INSERT WITH CHECK (true);
@@ -338,40 +338,40 @@ CREATE POLICY "Anyone can read active zones" ON delivery_zones FOR SELECT USING 
 CREATE POLICY "Admin can manage zones" ON delivery_zones FOR ALL USING (get_user_role() = 'admin');
 
 -- CUSTOMER ADDRESSES policies
-CREATE POLICY "Users can manage own addresses" ON customer_addresses FOR ALL USING (user_id = auth.uid());
+CREATE POLICY "Users can manage own addresses" ON customer_addresses FOR ALL USING (user_id = auth.uid()::uuid);
 CREATE POLICY "Admin/staff can read all addresses" ON customer_addresses FOR SELECT USING (get_user_role() IN ('admin', 'staff'));
 
 -- SUBSCRIPTIONS policies
-CREATE POLICY "Users can read own subscriptions" ON subscriptions FOR SELECT USING (user_id = auth.uid());
-CREATE POLICY "Users can create subscriptions" ON subscriptions FOR INSERT WITH CHECK (user_id = auth.uid());
-CREATE POLICY "Users can update own subscriptions" ON subscriptions FOR UPDATE USING (user_id = auth.uid());
+CREATE POLICY "Users can read own subscriptions" ON subscriptions FOR SELECT USING (user_id = auth.uid()::uuid);
+CREATE POLICY "Users can create subscriptions" ON subscriptions FOR INSERT WITH CHECK (user_id = auth.uid()::uuid);
+CREATE POLICY "Users can update own subscriptions" ON subscriptions FOR UPDATE USING (user_id = auth.uid()::uuid);
 CREATE POLICY "Admin/staff can read all subscriptions" ON subscriptions FOR SELECT USING (get_user_role() IN ('admin', 'staff'));
 CREATE POLICY "Admin can manage subscriptions" ON subscriptions FOR ALL USING (get_user_role() = 'admin');
 
 -- SUBSCRIPTION MEALS policies
 CREATE POLICY "Users can manage own sub meals" ON subscription_meals FOR ALL USING (
-  EXISTS (SELECT 1 FROM subscriptions WHERE id = subscription_id AND user_id = auth.uid())
+  EXISTS (SELECT 1 FROM subscriptions WHERE id = subscription_id AND user_id = auth.uid()::uuid)
 );
 CREATE POLICY "Admin can manage sub meals" ON subscription_meals FOR ALL USING (get_user_role() IN ('admin', 'staff'));
 
 -- SUBSCRIPTION CALENDAR policies
 CREATE POLICY "Users can read own calendar" ON subscription_calendar FOR SELECT USING (
-  EXISTS (SELECT 1 FROM subscriptions WHERE id = subscription_id AND user_id = auth.uid())
+  EXISTS (SELECT 1 FROM subscriptions WHERE id = subscription_id AND user_id = auth.uid()::uuid)
 );
 CREATE POLICY "Users can update own calendar" ON subscription_calendar FOR UPDATE USING (
-  EXISTS (SELECT 1 FROM subscriptions WHERE id = subscription_id AND user_id = auth.uid())
+  EXISTS (SELECT 1 FROM subscriptions WHERE id = subscription_id AND user_id = auth.uid()::uuid)
 );
 CREATE POLICY "Admin/staff can manage calendar" ON subscription_calendar FOR ALL USING (get_user_role() IN ('admin', 'staff'));
 
 -- ORDERS policies
-CREATE POLICY "Users can read own orders" ON orders FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY "Users can read own orders" ON orders FOR SELECT USING (user_id = auth.uid()::uuid);
 CREATE POLICY "Admin/staff can read all orders" ON orders FOR SELECT USING (get_user_role() IN ('admin', 'staff'));
 CREATE POLICY "Admin/staff can manage orders" ON orders FOR ALL USING (get_user_role() IN ('admin', 'staff'));
 CREATE POLICY "Delivery can read assigned orders" ON orders FOR SELECT USING (
-  delivery_person_id = auth.uid() AND get_user_role() = 'delivery'
+  delivery_person_id = auth.uid()::uuid AND get_user_role() = 'delivery'
 );
 CREATE POLICY "Delivery can update assigned orders" ON orders FOR UPDATE USING (
-  delivery_person_id = auth.uid() AND get_user_role() = 'delivery'
+  delivery_person_id = auth.uid()::uuid AND get_user_role() = 'delivery'
 );
 CREATE POLICY "Kitchen can read today orders" ON orders FOR SELECT USING (
   get_user_role() = 'kitchen' AND order_date = CURRENT_DATE
@@ -379,15 +379,15 @@ CREATE POLICY "Kitchen can read today orders" ON orders FOR SELECT USING (
 
 -- ORDER ITEMS policies
 CREATE POLICY "Users can read own order items" ON order_items FOR SELECT USING (
-  EXISTS (SELECT 1 FROM orders WHERE id = order_id AND user_id = auth.uid())
+  EXISTS (SELECT 1 FROM orders WHERE id = order_id AND user_id = auth.uid()::uuid)
 );
 CREATE POLICY "Admin/staff can manage order items" ON order_items FOR ALL USING (get_user_role() IN ('admin', 'staff'));
 CREATE POLICY "Kitchen can read order items" ON order_items FOR SELECT USING (get_user_role() = 'kitchen');
 CREATE POLICY "Delivery can read order items" ON order_items FOR SELECT USING (get_user_role() = 'delivery');
 
 -- PAYMENTS policies
-CREATE POLICY "Users can read own payments" ON payments FOR SELECT USING (user_id = auth.uid());
-CREATE POLICY "Users can create payments" ON payments FOR INSERT WITH CHECK (user_id = auth.uid());
+CREATE POLICY "Users can read own payments" ON payments FOR SELECT USING (user_id = auth.uid()::uuid);
+CREATE POLICY "Users can create payments" ON payments FOR INSERT WITH CHECK (user_id = auth.uid()::uuid);
 CREATE POLICY "Admin can manage payments" ON payments FOR ALL USING (get_user_role() = 'admin');
 
 -- COUPONS policies
@@ -412,7 +412,7 @@ BEGIN
   INSERT INTO users (id, email, full_name, phone, role)
   VALUES (
     NEW.id,
-    NEW.email,
+    COALESCE(NEW.email, ''),
     COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
     COALESCE(NEW.raw_user_meta_data->>'phone', ''),
     'customer'
