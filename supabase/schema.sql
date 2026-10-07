@@ -339,9 +339,13 @@ ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 
 -- Helper function to get current user role
 CREATE OR REPLACE FUNCTION get_user_role()
-RETURNS user_role AS $$
-  SELECT role FROM users WHERE id = auth.uid()::uuid;
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+RETURNS user_role
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT role FROM public.users WHERE id = auth.uid()::uuid;
+$$ LANGUAGE sql;
 
 -- USERS policies
 CREATE POLICY "Users can read own profile" ON users FOR SELECT USING (id = auth.uid()::uuid);
@@ -443,9 +447,12 @@ CREATE POLICY "Admin can manage settings" ON settings FOR ALL USING (get_user_ro
 -- ============================================
 
 CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-  INSERT INTO users (id, email, full_name, phone, role)
+  INSERT INTO public.users (id, email, full_name, phone, role)
   VALUES (
     NEW.id,
     COALESCE(NEW.email, ''),
@@ -455,7 +462,7 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
