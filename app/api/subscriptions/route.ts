@@ -41,13 +41,14 @@ export async function POST(request: NextRequest) {
 
   const { data: address } = await supabase
     .from('customer_addresses')
-    .select('*, delivery_zone:delivery_zones(*)')
+    .select('*')
     .eq('id', address_id)
     .single();
 
   if (!address) return NextResponse.json({ error: 'Address not found' }, { status: 404 });
 
-  const deliveryCharge = address.delivery_zone?.base_delivery_charge || 0;
+  const deliveryChargePerDay = address.delivery_charge || 0;
+  const deliveryCharge = deliveryChargePerDay * plan.duration_days;
   let discountAmount = 0;
 
   if (coupon_id) {

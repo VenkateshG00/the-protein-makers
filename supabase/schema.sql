@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS subscription_calendar CASCADE;
 DROP TABLE IF EXISTS subscription_meals CASCADE;
 DROP TABLE IF EXISTS subscriptions CASCADE;
 DROP TABLE IF EXISTS coupons CASCADE;
+DROP TABLE IF EXISTS pincode_delivery_charges CASCADE;
 DROP TABLE IF EXISTS customer_addresses CASCADE;
 DROP TABLE IF EXISTS delivery_zones CASCADE;
 DROP TABLE IF EXISTS meal_plan_items CASCADE;
@@ -143,6 +144,18 @@ CREATE TABLE delivery_zones (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Pincode-based delivery charges
+CREATE TABLE pincode_delivery_charges (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pincode VARCHAR(10) NOT NULL UNIQUE,
+  area_name VARCHAR(255) NOT NULL,
+  distance_tier VARCHAR(50) NOT NULL,
+  delivery_charge DECIMAL(10,2) NOT NULL DEFAULT 0,
+  is_serviceable BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Customer Addresses
 CREATE TABLE customer_addresses (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -152,7 +165,8 @@ CREATE TABLE customer_addresses (
   landmark TEXT,
   city VARCHAR(100) NOT NULL DEFAULT 'Hyderabad',
   pincode VARCHAR(10) NOT NULL,
-  delivery_zone_id UUID NOT NULL REFERENCES delivery_zones(id),
+  delivery_zone_id UUID REFERENCES delivery_zones(id),
+  delivery_charge DECIMAL(10,2) NOT NULL DEFAULT 0,
   is_default BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -312,6 +326,7 @@ CREATE TRIGGER set_updated_at_categories BEFORE UPDATE ON categories FOR EACH RO
 CREATE TRIGGER set_updated_at_meals BEFORE UPDATE ON meals FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER set_updated_at_meal_plans BEFORE UPDATE ON meal_plans FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER set_updated_at_delivery_zones BEFORE UPDATE ON delivery_zones FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER set_updated_at_pincode_charges BEFORE UPDATE ON pincode_delivery_charges FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER set_updated_at_subscriptions BEFORE UPDATE ON subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER set_updated_at_subscription_calendar BEFORE UPDATE ON subscription_calendar FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER set_updated_at_orders BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION update_updated_at();
@@ -326,6 +341,7 @@ ALTER TABLE meals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE meal_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE meal_plan_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE delivery_zones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pincode_delivery_charges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customer_addresses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscription_meals ENABLE ROW LEVEL SECURITY;
@@ -376,6 +392,10 @@ CREATE POLICY "Admin can manage plan items" ON meal_plan_items FOR ALL USING (ge
 -- DELIVERY ZONES policies
 CREATE POLICY "Anyone can read active zones" ON delivery_zones FOR SELECT USING (is_active = true);
 CREATE POLICY "Admin can manage zones" ON delivery_zones FOR ALL USING (get_user_role() = 'admin');
+
+-- PINCODE DELIVERY CHARGES policies
+CREATE POLICY "Anyone can read pincode charges" ON pincode_delivery_charges FOR SELECT USING (true);
+CREATE POLICY "Admin can manage pincode charges" ON pincode_delivery_charges FOR ALL USING (get_user_role() = 'admin');
 
 -- CUSTOMER ADDRESSES policies
 CREATE POLICY "Users can manage own addresses" ON customer_addresses FOR ALL USING (user_id = auth.uid()::uuid);
@@ -491,11 +511,36 @@ INSERT INTO categories (name, description, display_order) VALUES
   ('Rice Bowls', 'Balanced rice bowls with protein', 15),
   ('Protein Platters', 'Complete protein-loaded platters', 16);
 
--- Default delivery zones
+-- Default delivery zones (kept for backward compatibility)
 INSERT INTO delivery_zones (name, description, base_delivery_charge, free_delivery_threshold) VALUES
-  ('Kondapur', 'Kondapur and surrounding areas', 30.00, 500.00),
-  ('Miyapur', 'Miyapur and surrounding areas', 50.00, 700.00),
-  ('Gachibowli', 'Gachibowli and Financial District area', 40.00, 600.00);
+  ('0-5 km', 'Within 5 km from store', 100.00, NULL),
+  ('5-9 km', '5 to 9 km from store', 150.00, NULL),
+  ('9-15 km', '9 to 15 km from store', 250.00, NULL),
+  ('15+ km', 'Beyond 15 km', 300.00, NULL);
+
+-- Pincode-based delivery charges (Hyderabad, from Kondapur store 500084)
+INSERT INTO pincode_delivery_charges (pincode, area_name, distance_tier, delivery_charge) VALUES
+  -- 0-5 km tier (₹100)
+  ('500084', 'Kondapur', '0-5 km', 100.00),
+  ('500081', 'Hitech City', '0-5 km', 100.00),
+  ('500032', 'Gachibowli', '0-5 km', 100.00),
+  ('500133', 'Madhapur', '0-5 km', 100.00),
+  ('500046', 'Manikonda', '0-5 km', 100.00),
+  ('500085', 'Financial District', '0-5 km', 100.00),
+  -- 5-9 km tier (₹150)
+  ('500049', 'Miyapur', '5-9 km', 150.00),
+  ('500072', 'Kukatpally', '5-9 km', 150.00),
+  ('500082', 'KPHB Colony', '5-9 km', 150.00),
+  ('500075', 'Chandanagar', '5-9 km', 150.00),
+  ('500008', 'Tolichowki', '5-9 km', 150.00),
+  ('500019', 'Serilingampally', '5-9 km', 150.00),
+  ('500090', 'Nizampet', '5-9 km', 150.00),
+  -- 9-15 km tier (₹250)
+  ('500038', 'Sanjeeva Reddy Nagar', '9-15 km', 250.00),
+  ('500016', 'Begumpet', '9-15 km', 250.00),
+  ('500034', 'Banjara Hills', '9-15 km', 250.00),
+  ('500033', 'Jubilee Hills', '9-15 km', 250.00),
+  ('500018', 'Ameerpet', '9-15 km', 250.00);
 
 -- Default settings
 INSERT INTO settings (key, value) VALUES

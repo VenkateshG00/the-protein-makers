@@ -18,7 +18,7 @@ const navItems = [
   { href: '/admin/plans', label: 'Meal Plans', icon: ClipboardList },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: ShoppingCart },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
-  { href: '/admin/zones', label: 'Delivery Zones', icon: MapPin },
+  { href: '/admin/delivery-charges', label: 'Delivery Charges', icon: MapPin },
   { href: '/admin/deliveries', label: 'Deliveries', icon: Truck },
   { href: '/admin/reports', label: 'Reports', icon: FileText },
   { href: '/admin/payments', label: 'Payments', icon: CreditCard },

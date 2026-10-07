@@ -88,6 +88,14 @@ export interface DeliveryZone {
   updated_at: string;
 }
 
+export interface PincodeDeliveryCharge {
+  pincode: string;
+  area_name: string;
+  distance_tier: string;
+  delivery_charge: number;
+  is_serviceable: boolean;
+}
+
 export interface CustomerAddress {
   id: string;
   user_id: string;
@@ -96,7 +104,8 @@ export interface CustomerAddress {
   landmark: string | null;
   city: string;
   pincode: string;
-  delivery_zone_id: string;
+  delivery_zone_id: string | null;
+  delivery_charge: number;
   is_default: boolean;
   created_at: string;
   delivery_zone?: DeliveryZone;

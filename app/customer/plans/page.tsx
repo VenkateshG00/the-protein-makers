@@ -8,6 +8,14 @@ import { PageLoader } from '@/components/ui/LoadingSpinner';
 import { formatCurrency } from '@/lib/utils/format';
 import type { MealPlan } from '@/types/database';
 
+const durationLabels: Record<string, string> = {
+  weekly: 'Weekly',
+  monthly: 'Monthly',
+  six_day: '6-Day Cycle',
+  twenty_six_day: '26-Day Plan',
+  custom: 'Custom',
+};
+
 export default function CustomerPlansPage() {
   const [plans, setPlans] = useState<MealPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +56,7 @@ export default function CustomerPlansPage() {
                 <span className="flex items-center gap-1">
                   <Clock className="w-4 h-4" /> {plan.duration_days} days
                 </span>
-                <span className="capitalize">{plan.duration_type.replace('_', ' ')}</span>
+                <span>{durationLabels[plan.duration_type] || plan.duration_type}</span>
               </div>
               <Link
                 href={`/customer/plans/${plan.id}`}

@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Lock, Plus, Edit2, Trash2 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Lock, Plus, Edit2, Trash2, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { PageLoader } from '@/components/ui/LoadingSpinner';
+import { formatCurrency } from '@/lib/utils/format';
 import { createClient } from '@/lib/supabase/client';
-import type { User as UserType, CustomerAddress, DeliveryZone } from '@/types/database';
+import type { User as UserType, CustomerAddress, PincodeDeliveryCharge } from '@/types/database';
 
 const emptyAddr = {
   address_line1: '',
@@ -15,14 +16,12 @@ const emptyAddr = {
   landmark: '',
   city: 'Hyderabad',
   pincode: '',
-  delivery_zone_id: '',
   is_default: false,
 };
 
 export default function ProfilePage() {
   const [user, setUser] = useState<UserType | null>(null);
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
-  const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ full_name: '', phone: '' });
@@ -31,6 +30,8 @@ export default function ProfilePage() {
   const [editingAddr, setEditingAddr] = useState<CustomerAddress | null>(null);
   const [addrForm, setAddrForm] = useState(emptyAddr);
   const [addrSaving, setAddrSaving] = useState(false);
+  const [pincodeInfo, setPincodeInfo] = useState<PincodeDeliveryCharge | null>(null);
+  const [pincodeLoading, setPincodeLoading] = useState(false);
   const { showToast } = useToast();
 
   async function fetchData() {
@@ -42,18 +43,25 @@ export default function ProfilePage() {
     }
     const { data: addrs } = await supabase
       .from('customer_addresses')
-      .select('*, delivery_zone:delivery_zones(name)')
+      .select('*')
       .order('created_at', { ascending: false });
     setAddresses((addrs as CustomerAddress[]) || []);
-
-    const zonesRes = await fetch('/api/zones');
-    const zonesData = await zonesRes.json();
-    setZones(Array.isArray(zonesData) ? zonesData : []);
-
     setLoading(false);
   }
 
   useEffect(() => { fetchData(); }, []);
+
+  async function lookupPincode(pincode: string) {
+    if (pincode.length !== 6) {
+      setPincodeInfo(null);
+      return;
+    }
+    setPincodeLoading(true);
+    const res = await fetch(`/api/delivery-charge?pincode=${pincode}`);
+    const data = await res.json();
+    setPincodeInfo(data);
+    setPincodeLoading(false);
+  }
 
   async function handleSave() {
     if (!user) return;
@@ -75,7 +83,8 @@ export default function ProfilePage() {
 
   function openAddAddr() {
     setEditingAddr(null);
-    setAddrForm({ ...emptyAddr, delivery_zone_id: zones[0]?.id || '' });
+    setAddrForm({ ...emptyAddr });
+    setPincodeInfo(null);
     setAddrModal(true);
   }
 
@@ -87,20 +96,39 @@ export default function ProfilePage() {
       landmark: addr.landmark || '',
       city: addr.city,
       pincode: addr.pincode,
-      delivery_zone_id: addr.delivery_zone_id,
       is_default: addr.is_default,
     });
+    setPincodeInfo({
+      pincode: addr.pincode,
+      area_name: '',
+      distance_tier: '',
+      delivery_charge: addr.delivery_charge,
+      is_serviceable: true,
+    });
     setAddrModal(true);
+    lookupPincode(addr.pincode);
   }
 
   async function handleAddrSave(e: React.FormEvent) {
     e.preventDefault();
+    if (!pincodeInfo) {
+      showToast('Please enter a valid pincode', 'error');
+      return;
+    }
+    if (!pincodeInfo.is_serviceable) {
+      showToast('Delivery not available in this area', 'error');
+      return;
+    }
     setAddrSaving(true);
     const supabase = createClient();
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) return;
 
-    const payload = { ...addrForm, user_id: authUser.id };
+    const payload = {
+      ...addrForm,
+      user_id: authUser.id,
+      delivery_charge: pincodeInfo.delivery_charge,
+    };
 
     if (editingAddr) {
       const { error } = await supabase.from('customer_addresses').update(payload).eq('id', editingAddr.id);
@@ -207,8 +235,9 @@ export default function ProfilePage() {
                     <p className="text-sm font-medium text-gray-900">{addr.address_line1}</p>
                     {addr.address_line2 && <p className="text-xs text-gray-600">{addr.address_line2}</p>}
                     {addr.landmark && <p className="text-xs text-gray-500">Near: {addr.landmark}</p>}
-                    <p className="text-xs text-gray-500">
-                      {addr.city} - {addr.pincode} | Zone: {addr.delivery_zone?.name}
+                    <p className="text-xs text-gray-500">{addr.city} - {addr.pincode}</p>
+                    <p className="text-xs text-brand-green font-medium mt-0.5">
+                      Delivery: {formatCurrency(addr.delivery_charge)}/day
                     </p>
                     {addr.is_default && (
                       <span className="text-[10px] bg-brand-green text-white px-2 py-0.5 rounded-full mt-1 inline-block">Default</span>
@@ -272,22 +301,44 @@ export default function ProfilePage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Pincode *</label>
               <input type="text" required value={addrForm.pincode}
-                onChange={e => setAddrForm(f => ({ ...f, pincode: e.target.value }))}
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setAddrForm(f => ({ ...f, pincode: val }));
+                  if (val.length === 6) lookupPincode(val);
+                  else setPincodeInfo(null);
+                }}
                 placeholder="500084"
+                maxLength={6}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-green outline-none" />
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Zone *</label>
-            <select required value={addrForm.delivery_zone_id}
-              onChange={e => setAddrForm(f => ({ ...f, delivery_zone_id: e.target.value }))}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-green outline-none">
-              <option value="">Select zone</option>
-              {zones.map(z => (
-                <option key={z.id} value={z.id}>{z.name}</option>
-              ))}
-            </select>
-          </div>
+
+          {/* Auto-calculated delivery info */}
+          {pincodeLoading && (
+            <div className="flex items-center gap-2 text-sm text-gray-500 p-3 bg-gray-50 rounded-lg">
+              <Loader2 className="w-4 h-4 animate-spin" /> Checking delivery availability...
+            </div>
+          )}
+          {pincodeInfo && !pincodeLoading && (
+            <div className={`p-3 rounded-lg text-sm ${pincodeInfo.is_serviceable ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+              {pincodeInfo.is_serviceable ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-green-800">
+                      {pincodeInfo.area_name} ({pincodeInfo.distance_tier})
+                    </p>
+                    <p className="text-green-600 text-xs">Delivery available in your area</p>
+                  </div>
+                  <p className="font-bold text-green-800">{formatCurrency(pincodeInfo.delivery_charge)}/day</p>
+                </div>
+              ) : (
+                <p className="text-red-700 font-medium">
+                  Sorry, delivery is not available in this area yet.
+                </p>
+              )}
+            </div>
+          )}
+
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={addrForm.is_default}
               onChange={e => setAddrForm(f => ({ ...f, is_default: e.target.checked }))}
@@ -295,7 +346,9 @@ export default function ProfilePage() {
             Set as default address
           </label>
           <div className="flex gap-2 pt-2">
-            <Button type="submit" disabled={addrSaving}>{addrSaving ? 'Saving...' : editingAddr ? 'Update' : 'Add Address'}</Button>
+            <Button type="submit" disabled={addrSaving || !pincodeInfo?.is_serviceable}>
+              {addrSaving ? 'Saving...' : editingAddr ? 'Update' : 'Add Address'}
+            </Button>
             <Button type="button" variant="ghost" onClick={() => setAddrModal(false)}>Cancel</Button>
           </div>
         </form>

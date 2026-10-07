@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Check, ChefHat } from 'lucide-react';
+import { Check, ChefHat, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
 import { PageLoader } from '@/components/ui/LoadingSpinner';
 import { formatCurrency } from '@/lib/utils/format';
 import { createClient } from '@/lib/supabase/client';
-import type { MealPlan, Meal, DeliveryZone, Category } from '@/types/database';
+import type { MealPlan, Meal, Category, PincodeDeliveryCharge } from '@/types/database';
 
 type Step = 'meals' | 'address' | 'review';
 
@@ -31,7 +31,6 @@ export default function SubscribePage() {
   const [plan, setPlan] = useState<MealPlan | null>(null);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [selectedMeals, setSelectedMeals] = useState<SelectedMeal[]>([]);
 
   const [address, setAddress] = useState({
@@ -40,9 +39,10 @@ export default function SubscribePage() {
     landmark: '',
     city: 'Hyderabad',
     pincode: '',
-    delivery_zone_id: '',
   });
   const [savedAddressId, setSavedAddressId] = useState('');
+  const [pincodeInfo, setPincodeInfo] = useState<PincodeDeliveryCharge | null>(null);
+  const [pincodeLoading, setPincodeLoading] = useState(false);
 
   const [couponCode, setCouponCode] = useState('');
   const [couponResult, setCouponResult] = useState<{ coupon_id: string; discount_amount: number } | null>(null);
@@ -53,19 +53,26 @@ export default function SubscribePage() {
       fetch('/api/plans').then(r => r.json()),
       fetch('/api/meals').then(r => r.json()),
       fetch('/api/categories').then(r => r.json()),
-      fetch('/api/zones').then(r => r.json()),
-    ]).then(([plans, mealsData, catsData, zonesData]) => {
-      const found = plans.find((p: MealPlan) => p.id === planId);
-      setPlan(found);
-      setMeals(mealsData);
-      setCategories(catsData);
-      setZones(zonesData);
-      if (zonesData.length > 0) {
-        setAddress(a => ({ ...a, delivery_zone_id: zonesData[0].id }));
-      }
+    ]).then(([plans, mealsData, catsData]) => {
+      const planArr = Array.isArray(plans) ? plans : [];
+      setPlan(planArr.find((p: MealPlan) => p.id === planId) || null);
+      setMeals(Array.isArray(mealsData) ? mealsData : []);
+      setCategories(Array.isArray(catsData) ? catsData : []);
       setLoading(false);
     });
   }, [planId]);
+
+  async function lookupPincode(pincode: string) {
+    if (pincode.length !== 6) {
+      setPincodeInfo(null);
+      return;
+    }
+    setPincodeLoading(true);
+    const res = await fetch(`/api/delivery-charge?pincode=${pincode}`);
+    const data = await res.json();
+    setPincodeInfo(data);
+    setPincodeLoading(false);
+  }
 
   function toggleMeal(meal: Meal, mealTime: 'morning' | 'afternoon' | 'dinner') {
     setSelectedMeals(prev => {
@@ -98,7 +105,7 @@ export default function SubscribePage() {
   }
 
   async function handleSubscribe() {
-    if (!plan) return;
+    if (!plan || !pincodeInfo) return;
     setProcessing(true);
 
     try {
@@ -106,7 +113,11 @@ export default function SubscribePage() {
 
       const { data: addr, error: addrError } = await supabase
         .from('customer_addresses')
-        .insert({ ...address, user_id: (await supabase.auth.getUser()).data.user?.id })
+        .insert({
+          ...address,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          delivery_charge: pincodeInfo.delivery_charge,
+        })
         .select()
         .single();
 
@@ -185,10 +196,10 @@ export default function SubscribePage() {
   if (loading) return <PageLoader />;
   if (!plan) return <div className="text-center py-12 text-gray-500">Plan not found</div>;
 
-  const selectedZone = zones.find(z => z.id === address.delivery_zone_id);
-  const deliveryCharge = selectedZone?.base_delivery_charge || 0;
+  const deliveryCharge = pincodeInfo?.delivery_charge || 0;
+  const deliveryTotal = deliveryCharge * plan.duration_days;
   const discount = couponResult?.discount_amount || 0;
-  const total = plan.price + deliveryCharge - discount;
+  const total = plan.price + deliveryTotal - discount;
 
   const steps: { key: Step; label: string }[] = [
     { key: 'meals', label: 'Select Meals' },
@@ -302,7 +313,7 @@ export default function SubscribePage() {
             <h2 className="text-xl font-bold text-gray-900 mb-6">Delivery Address</h2>
             <div className="bg-white rounded-xl border p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1 *</label>
                 <input
                   type="text" required value={address.address_line1}
                   onChange={e => setAddress(a => ({ ...a, address_line1: e.target.value }))}
@@ -330,34 +341,56 @@ export default function SubscribePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Pincode *</label>
                   <input
                     type="text" required value={address.pincode}
-                    onChange={e => setAddress(a => ({ ...a, pincode: e.target.value }))}
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setAddress(a => ({ ...a, pincode: val }));
+                      if (val.length === 6) lookupPincode(val);
+                      else setPincodeInfo(null);
+                    }}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-green outline-none"
                     placeholder="500084"
                     maxLength={6}
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Zone</label>
-                <select
-                  value={address.delivery_zone_id}
-                  onChange={e => setAddress(a => ({ ...a, delivery_zone_id: e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-green outline-none"
-                >
-                  {zones.map(zone => (
-                    <option key={zone.id} value={zone.id}>
-                      {zone.name} — Delivery: {formatCurrency(zone.base_delivery_charge)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+
+              {/* Auto-calculated delivery info */}
+              {pincodeLoading && (
+                <div className="flex items-center gap-2 text-sm text-gray-500 p-3 bg-gray-50 rounded-lg">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Checking delivery availability...
+                </div>
+              )}
+              {pincodeInfo && !pincodeLoading && (
+                <div className={`p-4 rounded-lg ${pincodeInfo.is_serviceable ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                  {pincodeInfo.is_serviceable ? (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-medium text-green-800">
+                          {pincodeInfo.area_name} ({pincodeInfo.distance_tier})
+                        </p>
+                        <p className="font-bold text-green-800">{formatCurrency(pincodeInfo.delivery_charge)}/day</p>
+                      </div>
+                      <p className="text-xs text-green-600">
+                        Total delivery for {plan.duration_days} days: {formatCurrency(pincodeInfo.delivery_charge * plan.duration_days)}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-red-700 font-medium">
+                      Sorry, delivery is not available in this area yet. Please contact us for assistance.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex justify-between mt-6">
               <Button variant="outline" onClick={() => setStep('meals')}>Back</Button>
-              <Button onClick={() => setStep('review')} disabled={!address.address_line1 || !address.pincode}>
+              <Button
+                onClick={() => setStep('review')}
+                disabled={!address.address_line1 || !address.pincode || !pincodeInfo?.is_serviceable}
+              >
                 Continue to Review
               </Button>
             </div>
@@ -374,7 +407,6 @@ export default function SubscribePage() {
                 <div className="flex items-center gap-3 text-sm text-gray-600">
                   <Badge status={plan.plan_type} />
                   <span>{plan.duration_days} days</span>
-                  <span className="capitalize">{plan.duration_type.replace('_', ' ')}</span>
                 </div>
               </div>
 
@@ -403,9 +435,11 @@ export default function SubscribePage() {
                   {address.landmark && ` (Near ${address.landmark})`}
                   <br />{address.city} - {address.pincode}
                 </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Zone: {selectedZone?.name} — Delivery: {formatCurrency(deliveryCharge)}
-                </p>
+                {pincodeInfo && (
+                  <p className="text-sm text-brand-green font-medium mt-1">
+                    {pincodeInfo.area_name} — {formatCurrency(deliveryCharge)}/day x {plan.duration_days} days = {formatCurrency(deliveryTotal)}
+                  </p>
+                )}
               </div>
 
               <div className="p-6">
@@ -430,12 +464,12 @@ export default function SubscribePage() {
               <div className="p-6 bg-gray-50">
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Plan Price</span>
+                    <span className="text-gray-600">Meal Plan ({plan.duration_days} days)</span>
                     <span className="font-medium">{formatCurrency(plan.price)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Delivery Charge</span>
-                    <span className="font-medium">{formatCurrency(deliveryCharge)}</span>
+                    <span className="text-gray-600">Delivery ({formatCurrency(deliveryCharge)}/day x {plan.duration_days})</span>
+                    <span className="font-medium">{formatCurrency(deliveryTotal)}</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-green-600">
