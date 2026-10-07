@@ -25,7 +25,8 @@ export default function AdminOrdersPage() {
     if (dateFilter) url += `date=${dateFilter}&`;
     if (statusFilter) url += `status=${statusFilter}&`;
     const res = await fetch(url);
-    setOrders(await res.json());
+    const data = await res.json();
+    setOrders(Array.isArray(data) ? data : []);
     setLoading(false);
   }
 

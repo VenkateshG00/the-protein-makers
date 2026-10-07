@@ -21,7 +21,8 @@ export default function OrderDetailPage() {
     fetch('/api/orders')
       .then(r => r.json())
       .then(data => {
-        setOrder(data.find((o: Order) => o.id === id) || null);
+        const arr = Array.isArray(data) ? data : [];
+        setOrder(arr.find((o: Order) => o.id === id) || null);
         setLoading(false);
       });
   }, [id]);

@@ -19,8 +19,8 @@ export default function PlanDetailPage() {
     fetch('/api/plans')
       .then(res => res.json())
       .then(data => {
-        const found = data.find((p: MealPlan) => p.id === id);
-        setPlan(found || null);
+        const arr = Array.isArray(data) ? data : [];
+        setPlan(arr.find((p: MealPlan) => p.id === id) || null);
         setLoading(false);
       });
   }, [id]);

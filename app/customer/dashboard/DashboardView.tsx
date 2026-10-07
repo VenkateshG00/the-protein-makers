@@ -19,13 +19,15 @@ export default function CustomerDashboard() {
   useEffect(() => {
     async function fetchData() {
       const subRes = await fetch('/api/subscriptions');
-      const subs = await subRes.json();
+      const subsData = await subRes.json();
+      const subs = Array.isArray(subsData) ? subsData : [];
       const active = subs.find((s: Subscription) => s.status === 'active') || subs[0] || null;
       setSubscription(active);
 
       if (active) {
         const ordRes = await fetch('/api/orders');
-        const orders = await ordRes.json();
+        const ordData = await ordRes.json();
+        const orders = Array.isArray(ordData) ? ordData : [];
         setOrderCount(orders.length);
         setDeliveredCount(orders.filter((o: { status: string }) => o.status === 'delivered').length);
       }

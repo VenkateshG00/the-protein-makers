@@ -56,8 +56,10 @@ export default function MealsPage() {
       fetch('/api/meals'),
       fetch('/api/categories'),
     ]);
-    setMeals(await mealsRes.json());
-    setCategories(await catsRes.json());
+    const mealsData = await mealsRes.json();
+    const catsData = await catsRes.json();
+    setMeals(Array.isArray(mealsData) ? mealsData : []);
+    setCategories(Array.isArray(catsData) ? catsData : []);
     setLoading(false);
   }
 

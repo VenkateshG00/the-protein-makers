@@ -18,7 +18,7 @@ export default function CustomerOrdersPage() {
   useEffect(() => {
     fetch('/api/orders')
       .then(r => r.json())
-      .then(data => { setOrders(data); setLoading(false); });
+      .then(data => { setOrders(Array.isArray(data) ? data : []); setLoading(false); });
   }, []);
 
   const filtered = statusFilter ? orders.filter(o => o.status === statusFilter) : orders;

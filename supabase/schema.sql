@@ -51,7 +51,7 @@ CREATE TYPE dietary_tag AS ENUM ('veg', 'non_veg', 'egg');
 CREATE TYPE meal_type_enum AS ENUM ('breakfast', 'lunch', 'dinner', 'snack', 'pre_workout', 'add_on');
 CREATE TYPE meal_time AS ENUM ('morning', 'afternoon', 'dinner');
 CREATE TYPE plan_type AS ENUM ('fixed', 'customized');
-CREATE TYPE duration_type AS ENUM ('weekly', 'monthly', 'six_day');
+CREATE TYPE duration_type AS ENUM ('weekly', 'monthly', 'six_day', 'twenty_six_day', 'custom');
 CREATE TYPE subscription_status AS ENUM ('pending', 'active', 'paused', 'expired', 'cancelled');
 CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded');
 CREATE TYPE calendar_status AS ENUM ('scheduled', 'paused', 'prepared', 'out_for_delivery', 'delivered', 'cancelled');

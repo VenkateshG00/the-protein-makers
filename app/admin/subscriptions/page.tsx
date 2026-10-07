@@ -18,7 +18,7 @@ export default function AdminSubscriptionsPage() {
   useEffect(() => {
     fetch('/api/subscriptions')
       .then(r => r.json())
-      .then(data => { setSubscriptions(data); setLoading(false); });
+      .then(data => { setSubscriptions(Array.isArray(data) ? data : []); setLoading(false); });
   }, []);
 
   const filtered = subscriptions.filter(s => {

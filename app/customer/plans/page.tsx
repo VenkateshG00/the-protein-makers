@@ -16,7 +16,8 @@ export default function CustomerPlansPage() {
     fetch('/api/plans')
       .then(res => res.json())
       .then(data => {
-        setPlans(data.filter((p: MealPlan) => p.is_active));
+        const arr = Array.isArray(data) ? data : [];
+        setPlans(arr.filter((p: MealPlan) => p.is_active));
         setLoading(false);
       });
   }, []);

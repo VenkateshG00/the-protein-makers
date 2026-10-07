@@ -14,6 +14,8 @@ const durationTypes = [
   { value: 'weekly', label: 'Weekly', days: 7 },
   { value: 'monthly', label: 'Monthly', days: 30 },
   { value: 'six_day', label: '6-Day Cycle', days: 6 },
+  { value: 'twenty_six_day', label: '26-Day Plan', days: 26 },
+  { value: 'custom', label: 'Custom', days: 0 },
 ];
 
 export default function PlansPage() {
@@ -25,7 +27,7 @@ export default function PlansPage() {
     name: '',
     description: '',
     plan_type: 'customized' as 'fixed' | 'customized',
-    duration_type: 'weekly' as 'weekly' | 'monthly' | 'six_day',
+    duration_type: 'weekly' as 'weekly' | 'monthly' | 'six_day' | 'twenty_six_day' | 'custom',
     duration_days: 7,
     price: 0,
   });
@@ -34,7 +36,8 @@ export default function PlansPage() {
 
   async function fetchPlans() {
     const res = await fetch('/api/plans');
-    setPlans(await res.json());
+    const data = await res.json();
+    setPlans(Array.isArray(data) ? data : []);
     setLoading(false);
   }
 
@@ -173,15 +176,30 @@ export default function PlansPage() {
                 value={form.duration_type}
                 onChange={e => {
                   const dt = e.target.value as typeof form.duration_type;
-                  const days = durationTypes.find(d => d.value === dt)?.days || 7;
-                  setForm(f => ({ ...f, duration_type: dt, duration_days: days }));
+                  const preset = durationTypes.find(d => d.value === dt);
+                  const days = preset?.days || form.duration_days;
+                  setForm(f => ({ ...f, duration_type: dt, duration_days: days || 1 }));
                 }}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-green outline-none"
               >
-                {durationTypes.map(d => <option key={d.value} value={d.value}>{d.label} ({d.days} days)</option>)}
+                {durationTypes.map(d => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}{d.days ? ` (${d.days} days)` : ''}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
+          {form.duration_type === 'custom' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Number of Days</label>
+              <input
+                type="number" required min={1} max={365} value={form.duration_days}
+                onChange={e => setForm(f => ({ ...f, duration_days: parseInt(e.target.value) || 1 }))}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-green outline-none"
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
             <input
