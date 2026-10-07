@@ -157,7 +157,10 @@ export default function PlanDetailPage() {
                             </span>
                           </div>
                         </div>
-                        <p className="font-semibold text-brand-green text-sm shrink-0">{formatCurrency(meal.price)}</p>
+                        <div className="text-right shrink-0">
+                          <p className="font-semibold text-brand-green text-sm">{formatCurrency(meal.price)}</p>
+                          <p className="text-[10px] text-gray-400">+ delivery</p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -180,16 +183,16 @@ export default function PlanDetailPage() {
             <h3 className="font-semibold text-gray-900 mb-3">Price Breakdown</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">Meals ({plan.duration_days} days)</span>
-                <span className="font-medium">{formatCurrency(plan.price)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Per day cost</span>
+                <span className="text-gray-600">Per day cost (meals + delivery)</span>
                 <span className="font-medium">~{formatCurrency(perDay)}</span>
               </div>
-              <div className="flex justify-between text-xs text-gray-400">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Duration</span>
+                <span className="font-medium">{plan.duration_days} days</span>
+              </div>
+              <div className="flex justify-between text-xs text-green-600">
                 <span>Delivery charges</span>
-                <span>Based on distance</span>
+                <span>Included in price</span>
               </div>
               <div className="border-t pt-2 flex justify-between">
                 <span className="font-semibold text-gray-900">Total</span>

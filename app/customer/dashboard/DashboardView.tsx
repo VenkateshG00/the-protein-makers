@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Calendar, ShoppingCart, User, Pause, Dumbbell, Clock, ArrowRight, Utensils, Flame, Drumstick, Star, Wallet } from 'lucide-react';
+import { Calendar, ShoppingCart, User, Dumbbell, Clock, ArrowRight, Utensils, Flame, Drumstick, Star, Wallet } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { PageLoader } from '@/components/ui/LoadingSpinner';
@@ -199,7 +199,7 @@ export default function CustomerDashboard() {
           <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center mx-auto mb-2">
             <Utensils className="w-5 h-5 text-orange-600" />
           </div>
-          <p className="text-2xl font-bold text-orange-600">{orderCount - deliveredCount}</p>
+          <p className="text-2xl font-bold text-orange-600">{totalDays - deliveredCount}</p>
           <p className="text-xs text-gray-500 mt-1">Upcoming</p>
         </div>
         <div className="bg-white rounded-xl border p-4 text-center">
@@ -213,15 +213,14 @@ export default function CustomerDashboard() {
 
       {/* Quick links */}
       <h3 className="font-semibold text-gray-900 mb-3">Quick Actions</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { href: '/customer/calendar', icon: Calendar, label: 'View Calendar', desc: 'See your meal schedule', color: 'bg-green-50' },
-          { href: '/customer/calendar', icon: Pause, label: 'Pause Days', desc: 'Pause upcoming deliveries', color: 'bg-orange-50' },
-          { href: '/customer/orders', icon: ShoppingCart, label: 'Order History', desc: 'Track your orders', color: 'bg-blue-50' },
+          { href: '/customer/calendar', icon: Calendar, label: 'Calendar & Pause', desc: 'View schedule & pause days', color: 'bg-green-50' },
+          { href: '/customer/orders', icon: ShoppingCart, label: 'Orders', desc: 'Track your deliveries', color: 'bg-blue-50' },
           { href: '/customer/profile', icon: User, label: 'Profile', desc: 'Manage your account', color: 'bg-purple-50' },
         ].map(link => (
           <Link
-            key={link.href + link.label}
+            key={link.href}
             href={link.href}
             className="bg-white rounded-xl border p-4 hover:shadow-md transition-shadow flex items-center gap-3"
           >

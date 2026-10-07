@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pause, Play, Utensils } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, isAfter, isBefore } from 'date-fns';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { PageLoader } from '@/components/ui/LoadingSpinner';
-import type { SubscriptionCalendar, Subscription } from '@/types/database';
+import { formatCurrency } from '@/lib/utils/format';
+import type { SubscriptionCalendar, Subscription, Meal } from '@/types/database';
 
 const statusColors: Record<string, string> = {
   scheduled: 'bg-green-100 border-green-300 text-green-800',
@@ -25,6 +26,7 @@ export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState<Date | null>(null);
   const [calendarEntries, setCalendarEntries] = useState<SubscriptionCalendar[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { if (!currentMonth) setCurrentMonth(new Date()); }, [currentMonth]);
@@ -36,14 +38,24 @@ export default function CalendarPage() {
 
   useEffect(() => {
     async function fetchData() {
-      const subRes = await fetch('/api/subscriptions');
+      const [subRes, mealsRes] = await Promise.all([
+        fetch('/api/subscriptions'),
+        fetch('/api/meals'),
+      ]);
       const subs = await subRes.json();
-      const activeSub = subs.find((s: Subscription) => s.status === 'active');
+      const mealsData = await mealsRes.json();
+      setMeals(Array.isArray(mealsData) ? mealsData.filter((m: Meal) => m.is_available !== false) : []);
 
-      if (activeSub) {
-        setSubscription(activeSub);
-        const calRes = await fetch(`/api/calendar?subscription_id=${activeSub.id}`);
-        setCalendarEntries(await calRes.json());
+      const allSubs = Array.isArray(subs) ? subs : [];
+      const sub = allSubs.find((s: Subscription) => s.status === 'active')
+        || allSubs.find((s: Subscription) => s.status === 'pending')
+        || allSubs[0] || null;
+
+      if (sub) {
+        setSubscription(sub);
+        const calRes = await fetch(`/api/calendar?subscription_id=${sub.id}`);
+        const calData = await calRes.json();
+        setCalendarEntries(Array.isArray(calData) ? calData : []);
       }
       setLoading(false);
     }
@@ -284,10 +296,36 @@ export default function CalendarPage() {
       >
         {detailModal && (
           <div className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Status</p>
+            <div className="flex items-center gap-3">
               <Badge status={detailModal.status} />
+              {detailModal.status === 'scheduled' && (
+                <span className="text-xs text-gray-500">Delivery scheduled</span>
+              )}
             </div>
+
+            {detailModal.status !== 'cancelled' && meals.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Meals for this day</p>
+                <div className="space-y-2">
+                  {meals.map(meal => (
+                    <div key={meal.id} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg">
+                      <div className="w-9 h-9 bg-brand-gold-light rounded-lg flex items-center justify-center shrink-0">
+                        <Utensils className="w-4 h-4 text-brand-green" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-gray-900 truncate">{meal.name}</p>
+                          <Badge status={meal.dietary_tag} />
+                        </div>
+                        <p className="text-xs text-gray-500">{meal.protein_grams}g protein · {meal.calories} kcal</p>
+                      </div>
+                      <span className="text-sm font-semibold text-brand-green shrink-0">{formatCurrency(meal.price)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {detailModal.status === 'paused' && detailModal.pause_group_id && (
               <Button
                 variant="outline"

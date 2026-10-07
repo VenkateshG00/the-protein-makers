@@ -237,7 +237,7 @@ export default function ProfilePage() {
                     {addr.landmark && <p className="text-xs text-gray-500">Near: {addr.landmark}</p>}
                     <p className="text-xs text-gray-500">{addr.city} - {addr.pincode}</p>
                     <p className="text-xs text-brand-green font-medium mt-0.5">
-                      Delivery: {formatCurrency(addr.delivery_charge)}/day
+                      Delivery: {formatCurrency(addr.delivery_charge)}/order
                     </p>
                     {addr.is_default && (
                       <span className="text-[10px] bg-brand-green text-white px-2 py-0.5 rounded-full mt-1 inline-block">Default</span>
@@ -329,7 +329,7 @@ export default function ProfilePage() {
                     </p>
                     <p className="text-green-600 text-xs">Delivery available in your area</p>
                   </div>
-                  <p className="font-bold text-green-800">{formatCurrency(pincodeInfo.delivery_charge)}/day</p>
+                  <p className="font-bold text-green-800">{formatCurrency(pincodeInfo.delivery_charge)}/order</p>
                 </div>
               ) : (
                 <p className="text-red-700 font-medium">

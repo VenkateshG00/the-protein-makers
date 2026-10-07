@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
 import { PageLoader } from '@/components/ui/LoadingSpinner';
+import { useToast } from '@/components/ui/Toast';
 import { formatCurrency } from '@/lib/utils/format';
 import EmptyState from '@/components/ui/EmptyState';
-import { CreditCard, Search } from 'lucide-react';
+import { CreditCard, Search, CheckCircle } from 'lucide-react';
 import type { Subscription } from '@/types/database';
 
 export default function AdminSubscriptionsPage() {
@@ -14,12 +16,34 @@ export default function AdminSubscriptionsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [activating, setActivating] = useState<string | null>(null);
+  const { showToast } = useToast();
 
-  useEffect(() => {
+  function fetchData() {
     fetch('/api/subscriptions')
       .then(r => r.json())
       .then(data => { setSubscriptions(Array.isArray(data) ? data : []); setLoading(false); });
-  }, []);
+  }
+
+  useEffect(() => { fetchData(); }, []);
+
+  async function handleActivate(subId: string) {
+    if (!confirm('Activate this subscription and generate calendar?')) return;
+    setActivating(subId);
+    const res = await fetch('/api/subscriptions/activate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription_id: subId }),
+    });
+    if (res.ok) {
+      showToast('Subscription activated');
+      fetchData();
+    } else {
+      const err = await res.json();
+      showToast(err.error || 'Failed to activate', 'error');
+    }
+    setActivating(null);
+  }
 
   const filtered = subscriptions.filter(s => {
     const matchSearch = !search ||
@@ -74,6 +98,7 @@ export default function AdminSubscriptionsPage() {
                   <th className="px-4 py-3">Payment</th>
                   <th className="px-4 py-3">Duration</th>
                   <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -90,6 +115,18 @@ export default function AdminSubscriptionsPage() {
                       {format(new Date(sub.start_date), 'dd MMM')} — {format(new Date(sub.end_date), 'dd MMM yyyy')}
                     </td>
                     <td className="px-4 py-3 font-semibold text-gray-900">{formatCurrency(sub.total_amount)}</td>
+                    <td className="px-4 py-3">
+                      {sub.status === 'pending' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleActivate(sub.id)}
+                          disabled={activating === sub.id}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 mr-1" />
+                          {activating === sub.id ? 'Activating...' : 'Activate'}
+                        </Button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

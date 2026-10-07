@@ -47,8 +47,7 @@ export async function POST(request: NextRequest) {
 
   if (!address) return NextResponse.json({ error: 'Address not found' }, { status: 404 });
 
-  const deliveryChargePerDay = address.delivery_charge || 0;
-  const deliveryCharge = deliveryChargePerDay * plan.duration_days;
+  const deliveryCharge = 0;
   let discountAmount = 0;
 
   if (coupon_id) {

@@ -114,7 +114,7 @@ export default function DeliveryChargesPage() {
       </div>
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-sm text-yellow-800">
-        <strong>Default:</strong> Any pincode not listed here will be charged <strong>{formatCurrency(300)}/day</strong> (15+ km rate).
+        <strong>Default:</strong> Any pincode not listed here will be charged <strong>{formatCurrency(300)}/order</strong> (15+ km rate).
       </div>
 
       <div className="space-y-6">
@@ -132,7 +132,7 @@ export default function DeliveryChargesPage() {
                     <tr>
                       <th className="px-4 py-2 text-left font-medium text-gray-600">Pincode</th>
                       <th className="px-4 py-2 text-left font-medium text-gray-600">Area</th>
-                      <th className="px-4 py-2 text-left font-medium text-gray-600">Charge/Day</th>
+                      <th className="px-4 py-2 text-left font-medium text-gray-600">Charge/Order</th>
                       <th className="px-4 py-2 text-left font-medium text-gray-600">Status</th>
                       <th className="px-4 py-2 text-left font-medium text-gray-600">Actions</th>
                     </tr>
@@ -196,7 +196,7 @@ export default function DeliveryChargesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Charge/Day (₹)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Charge/Order (₹)</label>
               <input type="number" required min={0} value={form.delivery_charge}
                 onChange={e => setForm(f => ({ ...f, delivery_charge: parseFloat(e.target.value) || 0 }))}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-green outline-none" />

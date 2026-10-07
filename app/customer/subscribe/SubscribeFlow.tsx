@@ -196,10 +196,11 @@ export default function SubscribePage() {
   if (loading) return <PageLoader />;
   if (!plan) return <div className="text-center py-12 text-gray-500">Plan not found</div>;
 
-  const deliveryCharge = pincodeInfo?.delivery_charge || 0;
-  const deliveryTotal = deliveryCharge * plan.duration_days;
+  const deliveryPerOrder = pincodeInfo?.delivery_charge || 0;
+  const deliveryTotal = deliveryPerOrder * plan.duration_days;
+  const mealsTotal = plan.price - deliveryTotal;
   const discount = couponResult?.discount_amount || 0;
-  const total = plan.price + deliveryTotal - discount;
+  const total = plan.price - discount;
 
   const steps: { key: Step; label: string }[] = [
     { key: 'meals', label: 'Select Meals' },
@@ -371,10 +372,9 @@ export default function SubscribePage() {
                         <p className="font-medium text-green-800">
                           {pincodeInfo.area_name} ({pincodeInfo.distance_tier})
                         </p>
-                        <p className="font-bold text-green-800">{formatCurrency(pincodeInfo.delivery_charge)}/day</p>
                       </div>
                       <p className="text-xs text-green-600">
-                        Total delivery for {plan.duration_days} days: {formatCurrency(pincodeInfo.delivery_charge * plan.duration_days)}
+                        Delivery available — charges included in plan price
                       </p>
                     </div>
                   ) : (
@@ -437,7 +437,7 @@ export default function SubscribePage() {
                 </p>
                 {pincodeInfo && (
                   <p className="text-sm text-brand-green font-medium mt-1">
-                    {pincodeInfo.area_name} — {formatCurrency(deliveryCharge)}/day x {plan.duration_days} days = {formatCurrency(deliveryTotal)}
+                    {pincodeInfo.area_name} — {formatCurrency(pincodeInfo.delivery_charge)}/order
                   </p>
                 )}
               </div>
@@ -464,11 +464,11 @@ export default function SubscribePage() {
               <div className="p-6 bg-gray-50">
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Meal Plan ({plan.duration_days} days)</span>
-                    <span className="font-medium">{formatCurrency(plan.price)}</span>
+                    <span className="text-gray-600">Meals ({plan.duration_days} days)</span>
+                    <span className="font-medium">{formatCurrency(mealsTotal)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Delivery ({formatCurrency(deliveryCharge)}/day x {plan.duration_days})</span>
+                    <span className="text-gray-600">Delivery ({formatCurrency(deliveryPerOrder)}/order x {plan.duration_days})</span>
                     <span className="font-medium">{formatCurrency(deliveryTotal)}</span>
                   </div>
                   {discount > 0 && (

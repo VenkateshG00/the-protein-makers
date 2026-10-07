@@ -19,8 +19,8 @@ export default function CustomerMealsPage() {
       fetch('/api/meals').then(r => r.json()),
       fetch('/api/categories').then(r => r.json()),
     ]).then(([mealsData, catsData]) => {
-      setMeals(mealsData);
-      setCategories(catsData);
+      setMeals(Array.isArray(mealsData) ? mealsData : []);
+      setCategories(Array.isArray(catsData) ? catsData : []);
       setLoading(false);
     });
   }, []);

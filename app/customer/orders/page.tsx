@@ -5,20 +5,26 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import Badge from '@/components/ui/Badge';
 import { PageLoader } from '@/components/ui/LoadingSpinner';
-import { formatCurrency } from '@/lib/utils/format';
-import { ShoppingCart } from 'lucide-react';
+import { formatCurrency, formatDate } from '@/lib/utils/format';
+import { ShoppingCart, ClipboardList } from 'lucide-react';
 import EmptyState from '@/components/ui/EmptyState';
-import type { Order } from '@/types/database';
+import type { Order, Subscription } from '@/types/database';
 
 export default function CustomerOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
-    fetch('/api/orders')
-      .then(r => r.json())
-      .then(data => { setOrders(Array.isArray(data) ? data : []); setLoading(false); });
+    Promise.all([
+      fetch('/api/orders').then(r => r.json()),
+      fetch('/api/subscriptions').then(r => r.json()),
+    ]).then(([ordData, subData]) => {
+      setOrders(Array.isArray(ordData) ? ordData : []);
+      setSubscriptions(Array.isArray(subData) ? subData : []);
+      setLoading(false);
+    });
   }, []);
 
   const filtered = statusFilter ? orders.filter(o => o.status === statusFilter) : orders;
@@ -27,6 +33,35 @@ export default function CustomerOrdersPage() {
 
   return (
     <div>
+      {/* Subscriptions */}
+      {subscriptions.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 text-brand-green" /> My Subscriptions
+          </h2>
+          <div className="space-y-3">
+            {subscriptions.map(sub => (
+              <div key={sub.id} className="bg-white rounded-xl border p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-gray-900">{sub.meal_plan?.name || 'Meal Plan'}</h3>
+                  <div className="flex items-center gap-2">
+                    <Badge status={sub.status} />
+                    <Badge status={sub.payment_status} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500">
+                    {formatDate(sub.start_date)} — {formatDate(sub.end_date)}
+                  </span>
+                  <span className="font-bold text-brand-green">{formatCurrency(sub.total_amount)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Orders */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Order History</h1>
