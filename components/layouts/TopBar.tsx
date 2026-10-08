@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, User as UserIcon, LogOut, Calendar, ShoppingCart, Home, UtensilsCrossed } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@/types/database';
+import BrandLogo from '@/components/ui/BrandLogo';
 
 const navItems = [
   { href: '/customer/dashboard', label: 'Dashboard', icon: Home },
@@ -48,19 +49,10 @@ export default function TopBar() {
   }
 
   return (
-    <header className="bg-white border-b sticky top-0 z-30">
+    <header className="bg-white border-b border-border-subtle sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-3">
-            <Link href="/customer/dashboard" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-brand-green rounded-full flex items-center justify-center">
-                <span className="text-xs font-bold text-white">TPM</span>
-              </div>
-              <span className="text-lg font-semibold text-brand-green-dark hidden sm:block">
-                The Protein Makers
-              </span>
-            </Link>
-          </div>
+          <BrandLogo placement="navbar" href="/customer/dashboard" />
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-1">

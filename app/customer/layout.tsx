@@ -5,7 +5,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#F9FAF8]">
         <Suspense>
           <TopBar />
         </Suspense>

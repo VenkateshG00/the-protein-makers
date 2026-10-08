@@ -143,7 +143,7 @@ export default function MealsPage() {
         </Button>
       </div>
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex flex-wrap gap-3 mb-4">
         <select
           value={filterCategory}
           onChange={e => setFilterCategory(e.target.value)}
@@ -170,27 +170,31 @@ export default function MealsPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Name</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Category</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Price</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Protein</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Calories</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Tag</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Type</th>
-              <th className="px-4 py-3 text-left font-medium text-gray-600">Actions</th>
+              <th className="px-3 sm:px-4 py-3 text-left font-medium text-gray-600">Name</th>
+              <th className="px-3 sm:px-4 py-3 text-left font-medium text-gray-600 hidden sm:table-cell">Category</th>
+              <th className="px-3 sm:px-4 py-3 text-left font-medium text-gray-600">Price</th>
+              <th className="px-3 sm:px-4 py-3 text-left font-medium text-gray-600 hidden sm:table-cell">Protein</th>
+              <th className="px-3 sm:px-4 py-3 text-left font-medium text-gray-600 hidden sm:table-cell">Calories</th>
+              <th className="px-3 sm:px-4 py-3 text-left font-medium text-gray-600">Tag</th>
+              <th className="px-3 sm:px-4 py-3 text-left font-medium text-gray-600 hidden sm:table-cell">Type</th>
+              <th className="px-3 sm:px-4 py-3 text-left font-medium text-gray-600">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {filteredMeals.map(meal => (
               <tr key={meal.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium text-gray-900">{meal.name}</td>
-                <td className="px-4 py-3 text-gray-600">{meal.category?.name}</td>
-                <td className="px-4 py-3 text-gray-900">{formatCurrency(meal.price)}</td>
-                <td className="px-4 py-3 text-gray-600">{meal.protein_grams}g</td>
-                <td className="px-4 py-3 text-gray-600">{meal.calories} kcal</td>
-                <td className="px-4 py-3"><Badge status={meal.dietary_tag} /></td>
-                <td className="px-4 py-3 text-gray-600 capitalize">{meal.meal_type.replace('_', ' ')}</td>
-                <td className="px-4 py-3">
+                <td className="px-3 sm:px-4 py-3">
+                  <p className="font-medium text-gray-900">{meal.name}</p>
+                  <p className="text-xs text-gray-500 sm:hidden">{meal.category?.name}</p>
+                  <p className="text-xs text-gray-400 sm:hidden">{meal.protein_grams}g protein · {meal.calories} kcal</p>
+                </td>
+                <td className="px-3 sm:px-4 py-3 text-gray-600 hidden sm:table-cell">{meal.category?.name}</td>
+                <td className="px-3 sm:px-4 py-3 text-gray-900">{formatCurrency(meal.price)}</td>
+                <td className="px-3 sm:px-4 py-3 text-gray-600 hidden sm:table-cell">{meal.protein_grams}g</td>
+                <td className="px-3 sm:px-4 py-3 text-gray-600 hidden sm:table-cell">{meal.calories} kcal</td>
+                <td className="px-3 sm:px-4 py-3"><Badge status={meal.dietary_tag} /></td>
+                <td className="px-3 sm:px-4 py-3 text-gray-600 capitalize hidden sm:table-cell">{meal.meal_type.replace('_', ' ')}</td>
+                <td className="px-3 sm:px-4 py-3">
                   <div className="flex items-center gap-2">
                     <button onClick={() => openEdit(meal)} className="p-1.5 hover:bg-gray-100 rounded-lg">
                       <Edit2 className="w-4 h-4 text-gray-500" />

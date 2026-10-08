@@ -12,7 +12,7 @@ const roleDashboards: Record<string, string> = {
 };
 
 const rolePathPrefixes: Record<string, string[]> = {
-  admin: ['/admin'],
+  admin: ['/admin', '/customer'],
   staff: ['/admin'],
   kitchen: ['/kitchen'],
   delivery: ['/delivery'],

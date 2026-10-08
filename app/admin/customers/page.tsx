@@ -62,27 +62,31 @@ export default function AdminCustomersPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">Email</th>
-                  <th className="px-4 py-3">Phone</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Joined</th>
-                  <th className="px-4 py-3"></th>
+                  <th className="px-3 sm:px-4 py-3">Name</th>
+                  <th className="px-3 sm:px-4 py-3 hidden sm:table-cell">Email</th>
+                  <th className="px-3 sm:px-4 py-3 hidden sm:table-cell">Phone</th>
+                  <th className="px-3 sm:px-4 py-3">Status</th>
+                  <th className="px-3 sm:px-4 py-3 hidden sm:table-cell">Joined</th>
+                  <th className="px-3 sm:px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {filtered.map(customer => (
                   <tr key={customer.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{customer.full_name}</td>
-                    <td className="px-4 py-3 text-gray-600">{customer.email}</td>
-                    <td className="px-4 py-3 text-gray-600">{customer.phone || '—'}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 sm:px-4 py-3">
+                      <p className="font-medium text-gray-900">{customer.full_name}</p>
+                      <p className="text-xs text-gray-500 sm:hidden">{customer.email}</p>
+                      {customer.phone && <p className="text-xs text-gray-400 sm:hidden">{customer.phone}</p>}
+                    </td>
+                    <td className="px-3 sm:px-4 py-3 text-gray-600 hidden sm:table-cell">{customer.email}</td>
+                    <td className="px-3 sm:px-4 py-3 text-gray-600 hidden sm:table-cell">{customer.phone || '—'}</td>
+                    <td className="px-3 sm:px-4 py-3">
                       <Badge status={customer.is_active ? 'active' : 'inactive'} />
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">
+                    <td className="px-3 sm:px-4 py-3 text-gray-500 text-xs hidden sm:table-cell">
                       {format(new Date(customer.created_at), 'dd MMM yyyy')}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 sm:px-4 py-3">
                       <Link
                         href={`/admin/customers/${customer.id}`}
                         className="text-brand-green hover:underline text-sm font-medium"

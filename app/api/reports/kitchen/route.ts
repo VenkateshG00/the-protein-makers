@@ -14,32 +14,29 @@ export async function GET(request: NextRequest) {
   const date = request.nextUrl.searchParams.get('date');
   if (!date) return NextResponse.json({ error: 'Date is required' }, { status: 400 });
 
-  const { data: orderItems, error } = await supabase
-    .from('order_items')
-    .select(`
-      meal_id,
-      meal_time,
-      quantity,
-      meal:meals(id, name, category_id, dietary_tag, ingredients, category:categories(name))
-    `)
-    .eq('order_id', supabase.from('orders').select('id').eq('order_date', date).not('status', 'in', '("cancelled","failed")'));
-
-  // Alternative approach: join through orders
   const { data: orders } = await supabase
     .from('orders')
-    .select('id, order_id, status, order_items(*, meal:meals(id, name, category_id, dietary_tag, ingredients, category:categories(name)))')
+    .select('id, order_id, status, user:users!orders_user_id_fkey(full_name), order_items(*, meal:meals(id, name, category_id, dietary_tag, ingredients, category:categories(name)))')
     .eq('order_date', date)
     .not('status', 'in', '("cancelled","failed")');
 
-  if (!orders) return NextResponse.json({ morning: [], afternoon: [], dinner: [], totals: { morning: 0, afternoon: 0, dinner: 0, total: 0 } });
+  if (!orders) return NextResponse.json({ morning: [], afternoon: [], dinner: [], totals: { morning: 0, afternoon: 0, dinner: 0, total: 0 }, order_count: 0, date });
 
-  const mealAggregation: Record<string, Record<string, { meal_name: string; category: string; dietary_tag: string; quantity: number; ingredients: string }>> = {
+  const mealAggregation: Record<string, Record<string, {
+    meal_name: string;
+    category: string;
+    dietary_tag: string;
+    quantity: number;
+    ingredients: string;
+    customers: { name: string; order_id: string; quantity: number }[];
+  }>> = {
     morning: {},
     afternoon: {},
     dinner: {},
   };
 
   for (const order of orders) {
+    const customerName = order.user?.full_name || 'Unknown';
     for (const item of order.order_items || []) {
       const time = item.meal_time as string;
       const key = item.meal_id;
@@ -51,9 +48,15 @@ export async function GET(request: NextRequest) {
           dietary_tag: item.meal?.dietary_tag || 'non_veg',
           quantity: 0,
           ingredients: item.meal?.ingredients || '',
+          customers: [],
         };
       }
       mealAggregation[time][key].quantity += item.quantity;
+      mealAggregation[time][key].customers.push({
+        name: customerName,
+        order_id: order.order_id,
+        quantity: item.quantity,
+      });
     }
   }
 

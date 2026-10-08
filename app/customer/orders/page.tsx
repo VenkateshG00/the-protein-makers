@@ -8,6 +8,7 @@ import { PageLoader } from '@/components/ui/LoadingSpinner';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
 import { ShoppingCart, ClipboardList } from 'lucide-react';
 import EmptyState from '@/components/ui/EmptyState';
+import OrderStatusBadge from '@/components/ui/OrderStatusBadge';
 import type { Order, Subscription } from '@/types/database';
 
 export default function CustomerOrdersPage() {
@@ -99,7 +100,7 @@ export default function CustomerOrdersPage() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <span className="font-mono font-semibold text-brand-green">{order.order_id}</span>
-                  <Badge status={order.status} />
+                  <OrderStatusBadge status={order.status} />
                 </div>
                 <span className="text-sm text-gray-500">
                   {format(new Date(order.order_date), 'dd MMM yyyy')}

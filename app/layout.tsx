@@ -15,6 +15,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "The Protein Makers | Pure Protein. Pure Living.",
   description: "Premium protein-focused meal subscription and delivery service in Hyderabad. Fresh, healthy, high-protein meals delivered to your doorstep.",
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/logo-icon.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

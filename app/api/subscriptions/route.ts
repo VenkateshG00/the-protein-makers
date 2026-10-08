@@ -39,6 +39,23 @@ export async function POST(request: NextRequest) {
 
   if (!plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
 
+  const { data: existingSub } = await supabase
+    .from('subscriptions')
+    .select('id, status')
+    .eq('user_id', user.id)
+    .eq('meal_plan_id', meal_plan_id)
+    .in('status', ['pending', 'active'])
+    .limit(1);
+
+  if (existingSub && existingSub.length > 0) {
+    const s = existingSub[0];
+    return NextResponse.json({
+      error: s.status === 'active'
+        ? 'You already have an active subscription for this plan'
+        : 'You already have a pending subscription for this plan. Please wait for admin approval.',
+    }, { status: 409 });
+  }
+
   const { data: address } = await supabase
     .from('customer_addresses')
     .select('*')
@@ -101,4 +118,35 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json(subscription, { status: 201 });
+}
+
+export async function PUT(request: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+  if (profile?.role !== 'admin') {
+    return NextResponse.json({ error: 'Admin only' }, { status: 403 });
+  }
+
+  const { id, status } = await request.json();
+
+  if (status === 'cancelled') {
+    await supabase
+      .from('subscription_calendar')
+      .update({ status: 'cancelled' })
+      .eq('subscription_id', id)
+      .eq('status', 'scheduled');
+  }
+
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .update({ status })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
 }

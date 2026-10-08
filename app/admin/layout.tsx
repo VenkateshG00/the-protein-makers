@@ -5,7 +5,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
-      <div className="flex min-h-screen bg-gray-50">
+      <div className="flex min-h-screen bg-[#F9FAF8]">
         <Suspense>
           <Sidebar />
         </Suspense>

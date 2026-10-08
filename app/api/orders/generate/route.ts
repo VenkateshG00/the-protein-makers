@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
   const { data: calendarEntries } = await supabase
     .from('subscription_calendar')
-    .select('*, subscription:subscriptions(*, meal_plan:meal_plans(*), address:customer_addresses(*, delivery_zone:delivery_zones(*)), subscription_meals(*, meal:meals(*)))')
+    .select('*, subscription:subscriptions(*, meal_plan:meal_plans(*), address:customer_addresses(*), subscription_meals(*, meal:meals(*)))')
     .eq('date', targetDate)
     .eq('status', 'scheduled');
 
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   const { data: existingOrders } = await supabase
     .from('orders')
-    .select('subscription_id, order_date')
+    .select('subscription_id, user_id, order_date')
     .eq('order_date', targetDate);
 
   const existingSet = new Set(
@@ -48,15 +48,26 @@ export async function POST(request: NextRequest) {
     if (!sub || sub.status !== 'active') continue;
 
     const orderId = `TPM-${targetDate.replace(/-/g, '')}-${String(sequenceNumber).padStart(3, '0')}`;
-    const deliveryZoneId = sub.address?.delivery_zone_id;
 
     let meals = sub.subscription_meals || [];
-    if (sub.meal_plan?.plan_type === 'fixed') {
+    if (meals.length === 0 && sub.meal_plan_id) {
       const { data: planItems } = await supabase
         .from('meal_plan_items')
         .select('*, meal:meals(*)')
         .eq('meal_plan_id', sub.meal_plan_id);
       meals = planItems || [];
+    }
+    if (meals.length === 0 && sub.meal_plan_id) {
+      const { data: allMeals } = await supabase
+        .from('meals')
+        .select('*')
+        .eq('is_available', true);
+      meals = (allMeals || []).map(m => ({
+        meal_id: m.id,
+        meal_time: m.meal_type === 'breakfast' ? 'morning' : m.meal_type === 'dinner' ? 'dinner' : 'afternoon',
+        quantity: 1,
+        meal: m,
+      }));
     }
 
     let totalAmount = 0;
@@ -80,7 +91,6 @@ export async function POST(request: NextRequest) {
         calendar_id: entry.id,
         order_date: targetDate,
         status: 'pending',
-        delivery_zone_id: deliveryZoneId,
         total_amount: totalAmount,
       })
       .select()
@@ -92,10 +102,12 @@ export async function POST(request: NextRequest) {
       const items = orderItems.map((item: { meal_id: string; meal_time: string; quantity: number; unit_price: number }) => ({
         ...item,
         order_id: order.id,
+        status: 'pending',
       }));
       await supabase.from('order_items').insert(items);
     }
 
+    existingSet.add(key);
     sequenceNumber++;
     generated++;
   }

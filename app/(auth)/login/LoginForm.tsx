@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import BrandLogo from '@/components/ui/BrandLogo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,8 +48,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-8">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Sign in to your account</h2>
+    <div className="bg-white rounded-2xl shadow-lg p-8 border border-[#E6DEC8]">
+      <div className="mb-6">
+        <BrandLogo placement="login" />
+      </div>
+      <h2 className="text-xl font-extrabold text-[#0A4828] text-center mb-1">Welcome back</h2>
+      <p className="text-xs text-stone-500 text-center mb-6">Sign in to manage your daily protein meals</p>
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
@@ -87,7 +92,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-brand-green text-white py-2.5 rounded-lg font-medium hover:bg-brand-green-light transition-colors disabled:opacity-50"
+          className="w-full bg-[#0A4828] text-[#E3BA82] py-2.5 rounded-lg font-bold hover:bg-[#145934] transition-colors disabled:opacity-50 shadow"
         >
           {loading ? 'Signing in...' : 'Sign In'}
         </button>

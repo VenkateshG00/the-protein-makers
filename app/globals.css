@@ -1,14 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --brand-green: #1B5E20;
-  --brand-green-light: #2E7D32;
-  --brand-green-dark: #0D3B0F;
-  --brand-gold: #F5E6D3;
-  --brand-gold-light: #FFF8F0;
-  --brand-gold-dark: #D4B896;
+  --background: #F9FAF8;
+  --foreground: #142416;
+  --brand-green: #0A4828;
+  --brand-green-light: #145934;
+  --brand-green-dark: #062E19;
+  --brand-gold: #E3BA82;
+  --brand-gold-light: #F7F2E7;
+  --brand-gold-dark: #C9A96E;
+  --bg-canvas: #F9FAF8;
+  --bg-surface: #FFFFFF;
+  --text-secondary: #526354;
+  --border-subtle: #E6DEC8;
+  --card-shadow: 0 2px 10px rgba(10, 72, 40, 0.06);
 }
 
 @theme inline {
@@ -20,15 +25,9 @@
   --color-brand-gold: var(--brand-gold);
   --color-brand-gold-light: var(--brand-gold-light);
   --color-brand-gold-dark: var(--brand-gold-dark);
+  --color-border-subtle: var(--border-subtle);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
@@ -36,6 +35,49 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Status animation keyframes */
+@keyframes drawCheck {
+  from { stroke-dashoffset: 28; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes steamFloat {
+  0% { transform: translateY(2px); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateY(-5px); opacity: 0; }
+}
+
+@keyframes bellShake {
+  0%, 100% { transform: rotate(0deg); }
+  15% { transform: rotate(18deg); }
+  30% { transform: rotate(-16deg); }
+  45% { transform: rotate(12deg); }
+  60% { transform: rotate(-10deg); }
+}
+
+@keyframes scooterGlide {
+  0%, 100% { transform: translateX(-2px) translateY(0); }
+  50% { transform: translateX(2px) translateY(-1.5px); }
+}
+
+@keyframes roadDash {
+  from { stroke-dashoffset: 12; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(245, 158, 11, 0.25); }
+  50% { box-shadow: 0 0 16px rgba(245, 158, 11, 0.45); }
+}
+
+.draw-check { stroke-dasharray: 28; animation: drawCheck 0.55s ease-out forwards; }
+.steam-a { animation: steamFloat 1.5s infinite ease-in-out; }
+.steam-b { animation: steamFloat 1.5s infinite ease-in-out 0.45s; }
+.steam-c { animation: steamFloat 1.5s infinite ease-in-out 0.9s; }
+.bell-ring { transform-origin: top center; animation: bellShake 1.6s infinite ease-in-out; }
+.scooter-move { animation: scooterGlide 1s infinite ease-in-out; }
+.road-move { stroke-dasharray: 3 3; animation: roadDash 0.5s infinite linear; }
 
 @media print {
   .no-print {

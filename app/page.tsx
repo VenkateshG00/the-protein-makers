@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Dumbbell, Leaf, Clock, Truck, ChefHat, Shield } from 'lucide-react';
+import BrandLogo from '@/components/ui/BrandLogo';
 
 const features = [
   {
@@ -73,24 +74,22 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="bg-brand-green-dark">
+      <header className="bg-[#0A4828]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
-              <span className="text-sm font-bold text-white">TPM</span>
-            </div>
-            <span className="text-lg font-semibold text-white">The Protein Makers</span>
-          </div>
+          <Link href="/" className="flex items-center gap-3 group">
+            <img src="/logo-icon.svg" alt="The Protein Makers" className="w-10 h-10 rounded-full shrink-0 shadow-sm transition-transform group-hover:scale-105" />
+            <span className="text-lg font-extrabold text-[#E3BA82] hidden sm:block tracking-tight">The Protein Makers</span>
+          </Link>
           <div className="flex items-center gap-3">
             <Link
               href="/login"
-              className="text-sm text-green-200 hover:text-white transition-colors"
+              className="text-sm text-white/80 hover:text-white transition-colors"
             >
               Sign In
             </Link>
             <Link
               href="/register"
-              className="text-sm bg-white text-brand-green-dark px-4 py-2 rounded-lg font-medium hover:bg-brand-gold transition-colors"
+              className="text-sm bg-[#E3BA82] text-[#0A4828] px-4 py-2 rounded-lg font-bold hover:bg-[#C9A96E] transition-colors"
             >
               Get Started
             </Link>
@@ -99,28 +98,36 @@ export default function LandingPage() {
       </header>
 
       {/* Hero */}
-      <section className="bg-gradient-to-b from-brand-green-dark to-brand-green py-20 sm:py-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
-            Pure Protein.<br />Pure Living.
-          </h1>
-          <p className="text-lg sm:text-xl text-green-200 max-w-2xl mx-auto mb-10">
-            Premium protein-focused meals, freshly prepared and delivered to your doorstep in Hyderabad.
-            Subscribe to a plan that fits your fitness goals.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/register"
-              className="bg-brand-gold text-brand-green-dark px-8 py-3.5 rounded-xl font-semibold text-lg hover:bg-brand-gold-dark transition-colors"
-            >
-              Start Your Plan
-            </Link>
-            <Link
-              href="/login"
-              className="border-2 border-white/30 text-white px-8 py-3.5 rounded-xl font-semibold text-lg hover:bg-white/10 transition-colors"
-            >
-              View Menu
-            </Link>
+      <section className="bg-gradient-to-br from-[#0A4828] to-[#145934] py-20 sm:py-28">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-10">
+          <div className="text-center md:text-left flex-1">
+            <span className="inline-block text-[11px] font-bold uppercase tracking-widest bg-[#E3BA82]/20 text-[#E3BA82] border border-[#E3BA82]/40 px-3 py-1 rounded-full mb-4">
+              100% Macro-Verified Kitchen
+            </span>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white mb-6 leading-tight">
+              Pure Protein.<br />Pure Living.
+            </h1>
+            <p className="text-lg sm:text-xl text-white/80 max-w-2xl mb-10">
+              Premium protein-focused meals, freshly prepared and delivered to your doorstep in Hyderabad.
+              Subscribe to a plan that fits your fitness goals.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+              <Link
+                href="/register"
+                className="bg-[#E3BA82] text-[#0A4828] px-8 py-3.5 rounded-xl font-bold text-lg hover:bg-[#C9A96E] transition-colors shadow-lg"
+              >
+                Start Your Plan
+              </Link>
+              <Link
+                href="/login"
+                className="border-2 border-white/30 text-white px-8 py-3.5 rounded-xl font-semibold text-lg hover:bg-white/10 transition-colors"
+              >
+                View Menu
+              </Link>
+            </div>
+          </div>
+          <div className="shrink-0">
+            <BrandLogo placement="hero" />
           </div>
         </div>
       </section>
@@ -260,21 +267,15 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-brand-green-dark py-12">
+      <footer className="bg-[#062E19] py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-bold text-white">TPM</span>
-                </div>
-                <span className="text-lg font-semibold text-white">The Protein Makers</span>
-              </div>
-              <p className="text-sm text-green-300">Pure Protein. Pure Living.</p>
+              <BrandLogo placement="footer" />
             </div>
             <div>
               <h4 className="text-white font-medium mb-3">Contact</h4>
-              <div className="space-y-2 text-sm text-green-300">
+              <div className="space-y-2 text-sm text-white/70">
                 <p>Kondapur, Raghavendra Nagar Colony</p>
                 <p>Opp Gold Gym, Hyderabad 500084</p>
                 <p>WhatsApp: 9963701238</p>
@@ -284,12 +285,12 @@ export default function LandingPage() {
             <div>
               <h4 className="text-white font-medium mb-3">Quick Links</h4>
               <div className="space-y-2 text-sm">
-                <Link href="/login" className="block text-green-300 hover:text-white">Sign In</Link>
-                <Link href="/register" className="block text-green-300 hover:text-white">Register</Link>
+                <Link href="/login" className="block text-white/70 hover:text-[#E3BA82]">Sign In</Link>
+                <Link href="/register" className="block text-white/70 hover:text-[#E3BA82]">Register</Link>
               </div>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-green-800 text-center text-sm text-green-400">
+          <div className="mt-8 pt-8 border-t border-[#E3BA82]/20 text-center text-sm text-white/60">
             &copy; 2026 The Protein Makers. All rights reserved.
           </div>
         </div>

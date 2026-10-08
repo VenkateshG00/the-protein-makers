@@ -235,7 +235,7 @@ CREATE TABLE orders (
   order_date DATE NOT NULL,
   status order_status NOT NULL DEFAULT 'pending',
   delivery_person_id UUID REFERENCES users(id),
-  delivery_zone_id UUID NOT NULL REFERENCES delivery_zones(id),
+  delivery_zone_id UUID REFERENCES delivery_zones(id),
   total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -249,7 +249,8 @@ CREATE TABLE order_items (
   meal_id UUID NOT NULL REFERENCES meals(id),
   meal_time meal_time NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 1,
-  unit_price DECIMAL(10,2) NOT NULL
+  unit_price DECIMAL(10,2) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending'
 );
 
 -- Payments

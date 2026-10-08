@@ -9,6 +9,7 @@ import {
   Settings, ScrollText, Menu, X, LogOut, ChevronDown
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import BrandLogo from '@/components/ui/BrandLogo';
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -42,18 +43,8 @@ export default function Sidebar() {
 
   const nav = (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-green-800">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center shrink-0">
-            <span className="text-sm font-bold text-white">TPM</span>
-          </div>
-          {!collapsed && (
-            <div>
-              <h2 className="text-sm font-semibold text-white">The Protein Makers</h2>
-              <p className="text-xs text-green-300">Admin Panel</p>
-            </div>
-          )}
-        </div>
+      <div className="p-4 border-b border-[#E3BA82]/20">
+        <BrandLogo placement="sidebar" href="/admin/dashboard" collapsed={collapsed} />
       </div>
       <nav className="flex-1 overflow-y-auto py-4">
         {navItems.map(item => {
@@ -66,8 +57,8 @@ export default function Sidebar() {
               onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 px-4 py-2.5 mx-2 rounded-lg text-sm transition-colors ${
                 active
-                  ? 'bg-white/15 text-white font-medium'
-                  : 'text-green-200 hover:bg-white/10 hover:text-white'
+                  ? 'bg-[#E3BA82]/15 text-[#E3BA82] border-l-4 border-[#E3BA82] font-bold'
+                  : 'text-white/75 hover:bg-white/10 hover:text-white'
               }`}
             >
               <Icon className="w-5 h-5 shrink-0" />
@@ -76,10 +67,10 @@ export default function Sidebar() {
           );
         })}
       </nav>
-      <div className="p-4 border-t border-green-800">
+      <div className="p-4 border-t border-[#E3BA82]/20">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-2.5 w-full rounded-lg text-sm text-green-200 hover:bg-white/10 hover:text-white transition-colors"
+          className="flex items-center gap-3 px-4 py-2.5 w-full rounded-lg text-sm text-white/75 hover:bg-white/10 hover:text-white transition-colors"
         >
           <LogOut className="w-5 h-5 shrink-0" />
           {!collapsed && <span>Sign Out</span>}

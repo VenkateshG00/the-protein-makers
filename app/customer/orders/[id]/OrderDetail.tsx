@@ -3,13 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { ArrowLeft, Check, Circle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import { PageLoader } from '@/components/ui/LoadingSpinner';
 import { formatCurrency } from '@/lib/utils/format';
+import OrderProgressStepper from '@/components/ui/OrderProgressStepper';
 import type { Order } from '@/types/database';
-
-const statusTimeline = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'];
 
 export default function OrderDetailPage() {
   const { id } = useParams();
@@ -29,8 +28,6 @@ export default function OrderDetailPage() {
 
   if (loading) return <PageLoader />;
   if (!order) return <div className="text-center py-12 text-gray-500">Order not found</div>;
-
-  const currentIndex = statusTimeline.indexOf(order.status);
 
   return (
     <div>
@@ -52,33 +49,8 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {/* Timeline */}
-        <div className="p-6 border-b">
-          <h3 className="font-semibold text-gray-900 mb-4">Order Status</h3>
-          <div className="flex items-center justify-between">
-            {statusTimeline.map((status, i) => {
-              const isPast = i <= currentIndex;
-              const isCurrent = i === currentIndex;
-              return (
-                <div key={status} className="flex flex-col items-center relative">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    isPast ? 'bg-brand-green text-white' : 'bg-gray-200 text-gray-400'
-                  } ${isCurrent ? 'ring-4 ring-brand-green/20' : ''}`}>
-                    {isPast ? <Check className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
-                  </div>
-                  <span className={`text-[10px] mt-1 capitalize ${isPast ? 'text-brand-green font-medium' : 'text-gray-400'}`}>
-                    {status.replace('_', ' ')}
-                  </span>
-                  {i < statusTimeline.length - 1 && (
-                    <div className={`absolute top-4 left-8 w-[calc(100%-2rem)] h-0.5 ${
-                      i < currentIndex ? 'bg-brand-green' : 'bg-gray-200'
-                    }`} style={{ width: '60px', left: '32px' }} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        {/* Animated Order Progress Stepper */}
+        <OrderProgressStepper status={order.status} orderId={order.order_id} items={order.order_items} />
 
         {/* Meals */}
         <div className="p-6 border-b">

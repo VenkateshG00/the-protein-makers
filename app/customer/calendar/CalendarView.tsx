@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Pause, Play, Utensils } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, isAfter, isBefore } from 'date-fns';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, Pause, Play, Utensils, Truck, CheckCircle, Clock, ChefHat, Box, Package } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, isBefore } from 'date-fns';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { PageLoader } from '@/components/ui/LoadingSpinner';
 import { formatCurrency } from '@/lib/utils/format';
-import type { SubscriptionCalendar, Subscription, Meal } from '@/types/database';
+import { MEAL_TIMINGS } from '@/lib/constants/timings';
+import type { SubscriptionCalendar, Subscription, Meal, Order } from '@/types/database';
 
 const statusColors: Record<string, string> = {
   scheduled: 'bg-green-100 border-green-300 text-green-800',
@@ -20,7 +21,28 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-red-100 border-red-300 text-red-500',
 };
 
+const ITEM_STATUS: Record<string, { label: string; color: string; dotColor: string }> = {
+  scheduled:        { label: 'Scheduled',    color: 'text-gray-500',   dotColor: 'bg-gray-400' },
+  pending:          { label: 'Order Placed', color: 'text-amber-600',  dotColor: 'bg-amber-500' },
+  confirmed:        { label: 'Confirmed',    color: 'text-blue-600',   dotColor: 'bg-blue-500' },
+  preparing:        { label: 'Preparing',    color: 'text-orange-600', dotColor: 'bg-orange-500' },
+  ready:            { label: 'Ready',        color: 'text-indigo-600', dotColor: 'bg-indigo-500' },
+  out_for_delivery: { label: 'On the Way',  color: 'text-purple-600', dotColor: 'bg-purple-500' },
+  delivered:        { label: 'Delivered',    color: 'text-green-600',  dotColor: 'bg-green-500' },
+  cancelled:        { label: 'Cancelled',    color: 'text-red-500',    dotColor: 'bg-red-500' },
+};
+
 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function ItemStatus({ status }: { status: string }) {
+  const info = ITEM_STATUS[status] || ITEM_STATUS.scheduled;
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${info.color}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${info.dotColor}`} />
+      {info.label}
+    </span>
+  );
+}
 
 export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState<Date | null>(null);
@@ -33,6 +55,8 @@ export default function CalendarPage() {
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const [pauseMode, setPauseMode] = useState(false);
   const [detailModal, setDetailModal] = useState<SubscriptionCalendar | null>(null);
+  const [dayOrder, setDayOrder] = useState<Order | null>(null);
+  const [loadingOrder, setLoadingOrder] = useState(false);
   const [processing, setProcessing] = useState(false);
   const { showToast } = useToast();
 
@@ -64,24 +88,29 @@ export default function CalendarPage() {
 
   const calendarMap = useMemo(() => {
     const map: Record<string, SubscriptionCalendar> = {};
-    calendarEntries.forEach(entry => {
-      map[entry.date] = entry;
-    });
+    calendarEntries.forEach(entry => { map[entry.date] = entry; });
     return map;
   }, [calendarEntries]);
+
+  const openDayDetail = useCallback(async (entry: SubscriptionCalendar) => {
+    setDetailModal(entry);
+    setDayOrder(null);
+    setLoadingOrder(true);
+    const res = await fetch(`/api/orders?date=${entry.date}`);
+    const data = await res.json();
+    const orders = Array.isArray(data) ? data : [];
+    setDayOrder(orders[0] || null);
+    setLoadingOrder(false);
+  }, []);
 
   function getCalendarDays() {
     const monthStart = startOfMonth(currentMonth!);
     const monthEnd = endOfMonth(monthStart);
     const startDate = startOfWeek(monthStart);
     const endDate = endOfWeek(monthEnd);
-
     const days = [];
     let day = startDate;
-    while (day <= endDate) {
-      days.push(day);
-      day = addDays(day, 1);
-    }
+    while (day <= endDate) { days.push(day); day = addDays(day, 1); }
     return days;
   }
 
@@ -89,10 +118,8 @@ export default function CalendarPage() {
     if (!pauseMode) return;
     const entry = calendarMap[dateStr];
     if (!entry || entry.status !== 'scheduled') return;
-
     const date = new Date(dateStr);
     if (isBefore(date, new Date())) return;
-
     setSelectedDates(prev =>
       prev.includes(dateStr) ? prev.filter(d => d !== dateStr) : [...prev, dateStr]
     );
@@ -104,8 +131,7 @@ export default function CalendarPage() {
     for (let i = 1; i < sorted.length; i++) {
       const prev = new Date(sorted[i - 1]);
       const curr = new Date(sorted[i]);
-      const diff = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
-      if (diff !== 1) return false;
+      if ((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24) !== 1) return false;
     }
     return true;
   }
@@ -115,17 +141,12 @@ export default function CalendarPage() {
       showToast('Select at least 5 consecutive future days', 'error');
       return;
     }
-
     setProcessing(true);
     const res = await fetch('/api/calendar/pause', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        subscription_id: subscription.id,
-        dates: selectedDates.sort(),
-      }),
+      body: JSON.stringify({ subscription_id: subscription.id, dates: selectedDates.sort() }),
     });
-
     if (res.ok) {
       showToast('Days paused successfully');
       const calRes = await fetch(`/api/calendar?subscription_id=${subscription.id}`);
@@ -142,16 +163,11 @@ export default function CalendarPage() {
   async function handleUnpause(pauseGroupId: string) {
     if (!subscription) return;
     setProcessing(true);
-
     const res = await fetch('/api/calendar/unpause', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        subscription_id: subscription.id,
-        pause_group_id: pauseGroupId,
-      }),
+      body: JSON.stringify({ subscription_id: subscription.id, pause_group_id: pauseGroupId }),
     });
-
     if (res.ok) {
       showToast('Days un-paused successfully');
       const calRes = await fetch(`/api/calendar?subscription_id=${subscription.id}`);
@@ -178,9 +194,23 @@ export default function CalendarPage() {
 
   const days = getCalendarDays();
 
+  const mealSlots = [
+    { label: 'Breakfast', type: 'breakfast', timingKey: 'morning' as const },
+    { label: 'Lunch', type: 'lunch', timingKey: 'afternoon' as const },
+    { label: 'Dinner', type: 'dinner', timingKey: 'dinner' as const },
+  ];
+
+  // Build per-slot status from order_items
+  const itemStatusMap: Record<string, string> = {};
+  if (dayOrder?.order_items) {
+    for (const item of dayOrder.order_items) {
+      itemStatusMap[item.meal_time] = item.status || dayOrder.status || 'pending';
+    }
+  }
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Calendar</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -191,10 +221,7 @@ export default function CalendarPage() {
           {pauseMode ? (
             <>
               <Button variant="ghost" onClick={() => { setPauseMode(false); setSelectedDates([]); }}>Cancel</Button>
-              <Button
-                onClick={handlePause}
-                disabled={!areSelectedConsecutive() || processing}
-              >
+              <Button onClick={handlePause} disabled={!areSelectedConsecutive() || processing}>
                 <Pause className="w-4 h-4 mr-1" />
                 Pause {selectedDates.length} Days
               </Button>
@@ -209,16 +236,13 @@ export default function CalendarPage() {
 
       {pauseMode && (
         <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-          Select at least <strong>5 consecutive</strong> future days to pause. Click on green (scheduled) days to select them.
+          Select at least <strong>5 consecutive</strong> future days to pause.
           {selectedDates.length > 0 && selectedDates.length < 5 && (
-            <span className="ml-2 text-red-600">
-              ({5 - selectedDates.length} more needed)
-            </span>
+            <span className="ml-2 text-red-600">({5 - selectedDates.length} more needed)</span>
           )}
         </div>
       )}
 
-      {/* Legend */}
       <div className="flex flex-wrap gap-3 mb-4 text-xs">
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-200 border border-green-400" /> Scheduled</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-200 border border-gray-400" /> Paused</span>
@@ -227,7 +251,6 @@ export default function CalendarPage() {
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-200 border border-red-400" /> Cancelled</span>
       </div>
 
-      {/* Month navigation */}
       <div className="bg-white rounded-xl border overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 bg-brand-green text-white">
           <button onClick={() => setCurrentMonth(m => subMonths(m!, 1))} className="p-1 hover:bg-white/10 rounded">
@@ -239,16 +262,12 @@ export default function CalendarPage() {
           </button>
         </div>
 
-        {/* Day headers */}
         <div className="grid grid-cols-7 bg-gray-50 border-b">
           {dayNames.map(d => (
-            <div key={d} className="px-2 py-2 text-center text-xs font-medium text-gray-500">
-              {d}
-            </div>
+            <div key={d} className="px-2 py-2 text-center text-xs font-medium text-gray-500">{d}</div>
           ))}
         </div>
 
-        {/* Calendar grid */}
         <div className="grid grid-cols-7">
           {days.map((day, i) => {
             const dateStr = format(day, 'yyyy-MM-dd');
@@ -263,9 +282,9 @@ export default function CalendarPage() {
                 key={i}
                 onClick={() => {
                   if (pauseMode) toggleDateSelection(dateStr);
-                  else if (entry) setDetailModal(entry);
+                  else if (entry) openDayDetail(entry);
                 }}
-                className={`min-h-[80px] p-2 border-b border-r relative ${
+                className={`min-h-[68px] sm:min-h-[80px] p-1.5 sm:p-2 border-b border-r relative ${
                   !isCurrentMonth ? 'bg-gray-50/50' : ''
                 } ${isSelected ? 'ring-2 ring-brand-green ring-inset bg-brand-green/10' : ''} ${
                   entry && !pauseMode ? 'cursor-pointer hover:bg-gray-50' : ''
@@ -278,7 +297,7 @@ export default function CalendarPage() {
                   {format(day, 'd')}
                 </span>
                 {entry && isCurrentMonth && (
-                  <div className={`mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium border ${statusColors[entry.status] || 'bg-gray-100'}`}>
+                  <div className={`mt-1 px-1 py-0.5 rounded text-[9px] sm:text-[10px] font-medium border truncate ${statusColors[entry.status] || 'bg-gray-100'}`}>
                     {entry.status.replace('_', ' ')}
                   </div>
                 )}
@@ -288,52 +307,72 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Detail modal */}
+      {/* Day detail modal */}
       <Modal
         isOpen={!!detailModal}
-        onClose={() => setDetailModal(null)}
+        onClose={() => { setDetailModal(null); setDayOrder(null); }}
         title={detailModal ? format(new Date(detailModal.date), 'EEEE, dd MMMM yyyy') : ''}
       >
         {detailModal && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Badge status={detailModal.status} />
-              {detailModal.status === 'scheduled' && (
-                <span className="text-xs text-gray-500">Delivery scheduled</span>
-              )}
-            </div>
+            <Badge status={detailModal.status} />
+
+            {detailModal.status !== 'cancelled' && detailModal.status !== 'paused' && (
+              <>
+                {loadingOrder ? (
+                  <div className="py-3 text-center text-sm text-gray-400">Loading...</div>
+                ) : !dayOrder ? (
+                  <div className="text-center py-4">
+                    <Clock className="w-5 h-5 text-gray-300 mx-auto mb-1" />
+                    <p className="text-sm text-gray-500">No order generated yet</p>
+                  </div>
+                ) : null}
+              </>
+            )}
 
             {detailModal.status !== 'cancelled' && meals.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Meals for this day</p>
-                <div className="space-y-2">
-                  {meals.map(meal => (
-                    <div key={meal.id} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg">
-                      <div className="w-9 h-9 bg-brand-gold-light rounded-lg flex items-center justify-center shrink-0">
-                        <Utensils className="w-4 h-4 text-brand-green" />
-                      </div>
-                      <div className="flex-1 min-w-0">
+              <div className="space-y-3">
+                {mealSlots.map(slot => {
+                  const slotMeals = meals.filter(m => m.meal_type === slot.type);
+                  if (slotMeals.length === 0) return null;
+                  const timing = MEAL_TIMINGS[slot.timingKey];
+                  const slotStatus = itemStatusMap[slot.timingKey] || (dayOrder ? dayOrder.status : 'scheduled');
+
+                  return (
+                    <div key={slot.type} className="border rounded-lg overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-gray-900 truncate">{meal.name}</p>
-                          <Badge status={meal.dietary_tag} />
+                          <span className="text-sm">{timing.icon}</span>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-800">{slot.label}</p>
+                            <p className="text-[10px] text-gray-400">{timing.deliveryStart} – {timing.deliveryEnd}</p>
+                          </div>
                         </div>
-                        <p className="text-xs text-gray-500">{meal.protein_grams}g protein · {meal.calories} kcal</p>
+                        <ItemStatus status={slotStatus} />
                       </div>
-                      <span className="text-sm font-semibold text-brand-green shrink-0">{formatCurrency(meal.price)}</span>
+                      {slotMeals.map(meal => (
+                        <div key={meal.id} className="flex items-center gap-3 px-3 py-2">
+                          <div className="w-8 h-8 bg-brand-gold-light rounded-lg flex items-center justify-center shrink-0">
+                            <Utensils className="w-3.5 h-3.5 text-brand-green" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-medium text-gray-900 truncate">{meal.name}</p>
+                              <Badge status={meal.dietary_tag} />
+                            </div>
+                          </div>
+                          <span className="text-sm font-semibold text-brand-green">{formatCurrency(meal.price)}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             )}
 
             {detailModal.status === 'paused' && detailModal.pause_group_id && (
-              <Button
-                variant="outline"
-                onClick={() => handleUnpause(detailModal.pause_group_id!)}
-                disabled={processing}
-              >
-                <Play className="w-4 h-4 mr-1" />
-                Un-pause this block
+              <Button variant="outline" onClick={() => handleUnpause(detailModal.pause_group_id!)} disabled={processing}>
+                <Play className="w-4 h-4 mr-1" /> Un-pause this block
               </Button>
             )}
           </div>

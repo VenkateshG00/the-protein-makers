@@ -36,7 +36,10 @@ export default function ProfilePage() {
 
   async function fetchData() {
     const supabase = createClient();
-    const { data: userData } = await supabase.from('users').select('*').single();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) { setLoading(false); return; }
+
+    const { data: userData } = await supabase.from('users').select('*').eq('id', authUser.id).single();
     if (userData) {
       setUser(userData as UserType);
       setForm({ full_name: userData.full_name, phone: userData.phone || '' });
@@ -44,6 +47,7 @@ export default function ProfilePage() {
     const { data: addrs } = await supabase
       .from('customer_addresses')
       .select('*')
+      .eq('user_id', authUser.id)
       .order('created_at', { ascending: false });
     setAddresses((addrs as CustomerAddress[]) || []);
     setLoading(false);
