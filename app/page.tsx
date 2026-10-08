@@ -43,6 +43,7 @@ const sampleMeals = [
     tag: 'non_veg',
     tagLabel: 'Non-Veg',
     tagColor: 'bg-red-100 text-red-700 border-red-300',
+    image: '/meals/grilled-chicken-rice-bowl.webp',
   },
   {
     name: 'Paneer Protein Platter',
@@ -51,6 +52,7 @@ const sampleMeals = [
     tag: 'veg',
     tagLabel: 'Veg',
     tagColor: 'bg-green-100 text-green-700 border-green-300',
+    image: '/meals/paneer-protein-platter.webp',
   },
   {
     name: 'Whey Protein Shake',
@@ -59,6 +61,7 @@ const sampleMeals = [
     tag: 'veg',
     tagLabel: 'Veg',
     tagColor: 'bg-green-100 text-green-700 border-green-300',
+    image: '/meals/whey-protein-shake.png',
   },
   {
     name: 'Egg Omelette Supreme',
@@ -67,6 +70,7 @@ const sampleMeals = [
     tag: 'egg',
     tagLabel: 'Egg',
     tagColor: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+    image: '/meals/egg-omelette-supreme.webp',
   },
 ];
 
@@ -144,8 +148,8 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {sampleMeals.map(meal => (
               <div key={meal.name} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                <div className="h-40 bg-gradient-to-br from-brand-green/10 to-brand-gold/30 flex items-center justify-center">
-                  <ChefHat className="w-12 h-12 text-brand-green/40" />
+                <div className="h-40 overflow-hidden">
+                  <img src={meal.image} alt={meal.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-2">
