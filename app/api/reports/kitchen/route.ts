@@ -36,7 +36,8 @@ export async function GET(request: NextRequest) {
   };
 
   for (const order of orders) {
-    const customerName = order.user?.full_name || 'Unknown';
+    const userObj = Array.isArray(order.user) ? order.user[0] : order.user;
+    const customerName = userObj?.full_name || 'Unknown';
     for (const item of order.order_items || []) {
       const time = item.meal_time as string;
       const key = item.meal_id;
