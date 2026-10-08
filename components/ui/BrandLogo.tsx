@@ -15,11 +15,11 @@ export default function BrandLogo({ placement, href = '/', collapsed }: BrandLog
       return (
         <Link href={href} className="inline-flex items-center gap-3 group">
           <Image src="/logo-icon.svg" alt="The Protein Makers" width={40} height={40} className="rounded-full shrink-0 shadow-sm transition-transform group-hover:scale-105" />
-          <div className="flex flex-col hidden sm:flex">
+          <div className="flex flex-col">
             <span className="font-extrabold tracking-tight text-base text-[#0A4828] leading-none">
               THE PROTEIN MAKERS
             </span>
-            <span className="text-[11px] font-medium text-stone-500 mt-0.5">
+            <span className="text-[11px] font-medium text-stone-500 mt-0.5 hidden sm:block">
               Fresh Macro-Crafted Meals
             </span>
           </div>
@@ -43,9 +43,9 @@ export default function BrandLogo({ placement, href = '/', collapsed }: BrandLog
 
     case 'login':
       return (
-        <div className="flex flex-col items-center">
+        <Link href="/" className="flex flex-col items-center">
           <Image src="/logo-full.svg" alt="The Protein Makers" width={88} height={88} className="rounded-full shadow-md ring-2 ring-[#E3BA82]/60" />
-        </div>
+        </Link>
       );
 
     case 'hero':
