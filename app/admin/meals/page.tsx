@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Plus, Edit2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Edit2, ToggleLeft, ToggleRight, Star, Upload, X, ChefHat } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
@@ -37,6 +37,7 @@ const emptyForm = {
   meal_type: 'lunch' as MealType,
   preparation_time_minutes: 30,
   is_available: true,
+  photo_url: '' as string,
 };
 
 export default function MealsPage() {
@@ -49,6 +50,8 @@ export default function MealsPage() {
   const [saving, setSaving] = useState(false);
   const [filterCategory, setFilterCategory] = useState('');
   const [filterDietary, setFilterDietary] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
 
   async function fetchData() {
@@ -85,16 +88,49 @@ export default function MealsPage() {
       meal_type: meal.meal_type,
       preparation_time_minutes: meal.preparation_time_minutes || 30,
       is_available: meal.is_available,
+      photo_url: meal.photo_url || '',
     });
     setModalOpen(true);
+  }
+
+  async function deleteStorageFile(url: string) {
+    await fetch('/api/upload', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, bucket: 'meal-photos' }),
+    });
+  }
+
+  async function handlePhotoUpload(file: File) {
+    setUploading(true);
+    if (form.photo_url) await deleteStorageFile(form.photo_url);
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('bucket', 'meal-photos');
+    const res = await fetch('/api/upload', { method: 'POST', body: fd });
+    if (res.ok) {
+      const { url } = await res.json();
+      setForm(f => ({ ...f, photo_url: url }));
+      showToast('Photo uploaded');
+    } else {
+      const err = await res.json();
+      showToast(err.error || 'Upload failed', 'error');
+    }
+    setUploading(false);
+  }
+
+  async function handlePhotoRemove() {
+    if (form.photo_url) await deleteStorageFile(form.photo_url);
+    setForm(f => ({ ...f, photo_url: '' }));
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
 
+    const payload = { ...form, photo_url: form.photo_url || null };
     const method = editing ? 'PUT' : 'POST';
-    const body = editing ? { id: editing.id, ...form } : form;
+    const body = editing ? { id: editing.id, ...payload } : payload;
 
     const res = await fetch('/api/meals', {
       method,
@@ -120,6 +156,16 @@ export default function MealsPage() {
       body: JSON.stringify({ id: meal.id, is_active: !meal.is_active }),
     });
     showToast(`Meal ${meal.is_active ? 'deactivated' : 'activated'}`);
+    fetchData();
+  }
+
+  async function toggleHomepage(meal: Meal) {
+    await fetch('/api/meals', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: meal.id, show_on_homepage: !meal.show_on_homepage }),
+    });
+    showToast(meal.show_on_homepage ? 'Removed from homepage' : 'Featured on homepage');
     fetchData();
   }
 
@@ -184,9 +230,22 @@ export default function MealsPage() {
             {filteredMeals.map(meal => (
               <tr key={meal.id} className="hover:bg-gray-50">
                 <td className="px-3 sm:px-4 py-3">
-                  <p className="font-medium text-gray-900">{meal.name}</p>
-                  <p className="text-xs text-gray-500 sm:hidden">{meal.category?.name}</p>
-                  <p className="text-xs text-gray-400 sm:hidden">{meal.protein_grams}g protein · {meal.calories} kcal</p>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0 hidden sm:block">
+                      {meal.photo_url ? (
+                        <img src={meal.photo_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <ChefHat className="w-5 h-5 text-gray-300" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{meal.name}</p>
+                      <p className="text-xs text-gray-500 sm:hidden">{meal.category?.name}</p>
+                      <p className="text-xs text-gray-400 sm:hidden">{meal.protein_grams}g protein · {meal.calories} kcal</p>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-3 sm:px-4 py-3 text-gray-600 hidden sm:table-cell">{meal.category?.name}</td>
                 <td className="px-3 sm:px-4 py-3 text-gray-900">{formatCurrency(meal.price)}</td>
@@ -195,11 +254,14 @@ export default function MealsPage() {
                 <td className="px-3 sm:px-4 py-3"><Badge status={meal.dietary_tag} /></td>
                 <td className="px-3 sm:px-4 py-3 text-gray-600 capitalize hidden sm:table-cell">{meal.meal_type.replace('_', ' ')}</td>
                 <td className="px-3 sm:px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => openEdit(meal)} className="p-1.5 hover:bg-gray-100 rounded-lg">
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => openEdit(meal)} className="p-1.5 hover:bg-gray-100 rounded-lg" title="Edit">
                       <Edit2 className="w-4 h-4 text-gray-500" />
                     </button>
-                    <button onClick={() => toggleActive(meal)} className="p-1.5 hover:bg-gray-100 rounded-lg">
+                    <button onClick={() => toggleHomepage(meal)} className="p-1.5 hover:bg-gray-100 rounded-lg" title={meal.show_on_homepage ? 'Remove from homepage' : 'Feature on homepage'}>
+                      <Star className={`w-4 h-4 ${meal.show_on_homepage ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}`} />
+                    </button>
+                    <button onClick={() => toggleActive(meal)} className="p-1.5 hover:bg-gray-100 rounded-lg" title={meal.is_active ? 'Deactivate' : 'Activate'}>
                       {meal.is_active ? <ToggleRight className="w-5 h-5 text-green-600" /> : <ToggleLeft className="w-5 h-5 text-gray-400" />}
                     </button>
                   </div>
@@ -283,6 +345,40 @@ export default function MealsPage() {
                 onChange={e => setForm(f => ({ ...f, preparation_time_minutes: parseInt(e.target.value) || 30 }))}
                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-green outline-none"
               />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Photo (optional)</label>
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 border shrink-0 flex items-center justify-center">
+                  {form.photo_url ? (
+                    <img src={form.photo_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <ChefHat className="w-8 h-8 text-gray-300" />
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) handlePhotoUpload(file);
+                      e.target.value = '';
+                    }}
+                  />
+                  <Button type="button" variant="ghost" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="w-4 h-4 mr-1.5" />
+                    {uploading ? 'Uploading...' : 'Upload Photo'}
+                  </Button>
+                  {form.photo_url && (
+                    <button type="button" onClick={handlePhotoRemove} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
+                      <X className="w-3 h-3" /> Remove
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>

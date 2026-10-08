@@ -48,6 +48,7 @@ export interface Meal {
   preparation_time_minutes: number | null;
   is_available: boolean;
   is_active: boolean;
+  show_on_homepage: boolean;
   created_at: string;
   updated_at: string;
   category?: Category;

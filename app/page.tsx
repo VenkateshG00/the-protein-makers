@@ -1,6 +1,9 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { Dumbbell, Leaf, Clock, Truck, ChefHat, Shield } from 'lucide-react';
 import BrandLogo from '@/components/ui/BrandLogo';
+import { createClient } from '@/lib/supabase/server';
+import { connection } from 'next/server';
 
 const features = [
   {
@@ -35,44 +38,87 @@ const features = [
   },
 ];
 
-const sampleMeals = [
-  {
-    name: 'Grilled Chicken Rice Bowl',
-    protein: '45g',
-    calories: '520 kcal',
-    tag: 'non_veg',
-    tagLabel: 'Non-Veg',
-    tagColor: 'bg-red-100 text-red-700 border-red-300',
-    image: '/meals/grilled-chicken-rice-bowl.webp',
-  },
-  {
-    name: 'Paneer Protein Platter',
-    protein: '38g',
-    calories: '480 kcal',
-    tag: 'veg',
-    tagLabel: 'Veg',
-    tagColor: 'bg-green-100 text-green-700 border-green-300',
-    image: '/meals/paneer-protein-platter.webp',
-  },
-  {
-    name: 'Whey Protein Shake',
-    protein: '30g',
-    calories: '180 kcal',
-    tag: 'veg',
-    tagLabel: 'Veg',
-    tagColor: 'bg-green-100 text-green-700 border-green-300',
-    image: '/meals/whey-protein-shake.png',
-  },
-  {
-    name: 'Egg Omelette Supreme',
-    protein: '35g',
-    calories: '350 kcal',
-    tag: 'egg',
-    tagLabel: 'Egg',
-    tagColor: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-    image: '/meals/egg-omelette-supreme.webp',
-  },
-];
+const tagConfig: Record<string, { label: string; color: string }> = {
+  non_veg: { label: 'Non-Veg', color: 'bg-red-100 text-red-700 border-red-300' },
+  veg: { label: 'Veg', color: 'bg-green-100 text-green-700 border-green-300' },
+  egg: { label: 'Egg', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
+};
+
+async function getFeaturedMeals() {
+  await connection();
+  const supabase = await createClient();
+
+  const { data: featured } = await supabase
+    .from('meals')
+    .select('id, name, protein_grams, calories, dietary_tag, photo_url')
+    .eq('is_active', true)
+    .eq('show_on_homepage', true)
+    .order('name')
+    .limit(8);
+
+  if (featured && featured.length > 0) return featured;
+
+  const { data: fallback } = await supabase
+    .from('meals')
+    .select('id, name, protein_grams, calories, dietary_tag, photo_url')
+    .eq('is_active', true)
+    .order('name')
+    .limit(4);
+
+  return fallback || [];
+}
+
+async function MenuHighlights() {
+  const meals = await getFeaturedMeals();
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {meals.map(meal => {
+        const tag = tagConfig[meal.dietary_tag] || tagConfig.non_veg;
+        return (
+          <div key={meal.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <div className="h-40 overflow-hidden bg-gradient-to-br from-brand-green/10 to-brand-gold/30 flex items-center justify-center">
+              {meal.photo_url ? (
+                <img src={meal.photo_url} alt={meal.name} className="w-full h-full object-cover" />
+              ) : (
+                <ChefHat className="w-12 h-12 text-brand-green/40" />
+              )}
+            </div>
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-gray-900 text-sm">{meal.name}</h3>
+              </div>
+              <span className={`inline-block text-xs px-2 py-0.5 rounded-full border ${tag.color} mb-3`}>
+                {tag.label}
+              </span>
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <span className="font-medium text-brand-green">{meal.protein_grams}g protein</span>
+                <span>{meal.calories} kcal</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function MenuHighlightsSkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {[1, 2, 3, 4].map(i => (
+        <div key={i} className="bg-white rounded-xl shadow-sm overflow-hidden animate-pulse">
+          <div className="h-40 bg-gray-200" />
+          <div className="p-4 space-y-3">
+            <div className="h-4 bg-gray-200 rounded w-3/4" />
+            <div className="h-3 bg-gray-200 rounded w-1/4" />
+            <div className="h-3 bg-gray-200 rounded w-1/2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function LandingPage() {
   return (
@@ -145,27 +191,9 @@ export default function LandingPage() {
               Every meal is packed with premium protein to fuel your body and your goals.
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {sampleMeals.map(meal => (
-              <div key={meal.name} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                <div className="h-40 overflow-hidden">
-                  <img src={meal.image} alt={meal.name} className="w-full h-full object-cover" />
-                </div>
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 text-sm">{meal.name}</h3>
-                  </div>
-                  <span className={`inline-block text-xs px-2 py-0.5 rounded-full border ${meal.tagColor} mb-3`}>
-                    {meal.tagLabel}
-                  </span>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span className="font-medium text-brand-green">{meal.protein} protein</span>
-                    <span>{meal.calories}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <Suspense fallback={<MenuHighlightsSkeleton />}>
+            <MenuHighlights />
+          </Suspense>
         </div>
       </section>
 
