@@ -19,7 +19,7 @@ export default function LoginPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (authError) {
       setError(authError.message);
@@ -30,6 +30,7 @@ export default function LoginPage() {
     const { data: profile } = await supabase
       .from('users')
       .select('role')
+      .eq('id', authData.user.id)
       .single();
 
     const roleDashboards: Record<string, string> = {

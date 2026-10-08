@@ -44,6 +44,13 @@ const tagConfig: Record<string, { label: string; color: string }> = {
   egg: { label: 'Egg', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
 };
 
+const hardcodedMeals = [
+  { id: 'hc-1', name: 'Grilled Chicken Rice Bowl', protein_grams: 45, calories: 520, dietary_tag: 'non_veg', photo_url: '/meals/grilled-chicken-rice-bowl.webp' },
+  { id: 'hc-2', name: 'Paneer Protein Platter', protein_grams: 38, calories: 480, dietary_tag: 'veg', photo_url: '/meals/paneer-protein-platter.webp' },
+  { id: 'hc-3', name: 'Whey Protein Shake', protein_grams: 30, calories: 180, dietary_tag: 'veg', photo_url: '/meals/whey-protein-shake.png' },
+  { id: 'hc-4', name: 'Egg Omelette Supreme', protein_grams: 35, calories: 350, dietary_tag: 'egg', photo_url: '/meals/egg-omelette-supreme.webp' },
+];
+
 async function getFeaturedMeals() {
   await connection();
   const supabase = await createClient();
@@ -58,14 +65,7 @@ async function getFeaturedMeals() {
 
   if (featured && featured.length > 0) return featured;
 
-  const { data: fallback } = await supabase
-    .from('meals')
-    .select('id, name, protein_grams, calories, dietary_tag, photo_url')
-    .eq('is_active', true)
-    .order('name')
-    .limit(4);
-
-  return fallback || [];
+  return hardcodedMeals;
 }
 
 async function MenuHighlights() {
