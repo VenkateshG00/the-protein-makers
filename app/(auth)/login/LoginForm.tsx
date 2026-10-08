@@ -4,8 +4,6 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import BrandLogo from '@/components/ui/BrandLogo';
-
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,9 +47,6 @@ export default function LoginPage() {
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-8 border border-[#E6DEC8]">
-      <div className="mb-6">
-        <BrandLogo placement="login" />
-      </div>
       <h2 className="text-xl font-extrabold text-[#0A4828] text-center mb-1">Welcome back</h2>
       <p className="text-xs text-stone-500 text-center mb-6">Sign in to manage your daily protein meals</p>
 
