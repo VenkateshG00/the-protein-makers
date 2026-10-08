@@ -5,10 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { ArrowLeft } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
+import OrderStatusBadge from '@/components/ui/OrderStatusBadge';
 import { PageLoader } from '@/components/ui/LoadingSpinner';
 import { formatCurrency } from '@/lib/utils/format';
+import { MEAL_TIMINGS, type MealSlot } from '@/lib/constants/timings';
 import OrderProgressStepper from '@/components/ui/OrderProgressStepper';
 import type { Order } from '@/types/database';
+
+const mealTimeOrder: Record<string, number> = { morning: 0, afternoon: 1, dinner: 2 };
 
 export default function OrderDetailPage() {
   const { id } = useParams();
@@ -49,25 +53,31 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {/* Animated Order Progress Stepper */}
+        {/* Animated Order Progress Stepper — per-meal aware */}
         <OrderProgressStepper status={order.status} orderId={order.order_id} items={order.order_items} />
 
         {/* Meals */}
         <div className="p-6 border-b">
           <h3 className="font-semibold text-gray-900 mb-3">Meals</h3>
           <div className="space-y-3">
-            {order.order_items?.map(item => (
-              <div key={item.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Badge status={item.meal?.dietary_tag || 'non_veg'} />
-                  <div>
-                    <p className="font-medium text-gray-900">{item.meal?.name}</p>
-                    <p className="text-xs text-gray-500 capitalize">{item.meal_time} | x{item.quantity}</p>
+            {[...(order.order_items || [])].sort((a, b) => (mealTimeOrder[a.meal_time] ?? 9) - (mealTimeOrder[b.meal_time] ?? 9)).map(item => {
+              const timing = MEAL_TIMINGS[item.meal_time as MealSlot];
+              return (
+                <div key={item.id} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Badge status={item.meal?.dietary_tag || 'non_veg'} />
+                    <div>
+                      <p className="font-medium text-gray-900">{item.meal?.name}</p>
+                      <p className="text-xs text-gray-500 capitalize">{timing?.icon} {timing?.label || item.meal_time} | x{item.quantity}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <OrderStatusBadge status={item.status || 'pending'} />
+                    <span className="font-medium">{formatCurrency(item.unit_price * item.quantity)}</span>
                   </div>
                 </div>
-                <span className="font-medium">{formatCurrency(item.unit_price * item.quantity)}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

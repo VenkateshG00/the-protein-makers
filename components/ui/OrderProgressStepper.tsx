@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { MEAL_TIMINGS, type MealSlot } from '@/lib/constants/timings';
 
 const STEPS = [
   { key: 'pending', label: 'Order Placed', subtitle: 'Awaiting kitchen confirmation' },
@@ -11,7 +12,20 @@ const STEPS = [
   { key: 'delivered', label: 'Delivered', subtitle: 'Enjoy your protein meal!' },
 ];
 
-interface MealItem {
+const statusFlow = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'];
+const mealSlotOrder: MealSlot[] = ['morning', 'afternoon', 'dinner'];
+
+const statusLabels: Record<string, string> = {
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  preparing: 'Preparing',
+  ready: 'Ready',
+  out_for_delivery: 'On the Way',
+  delivered: 'Delivered',
+};
+
+interface OrderItem {
+  id: string;
   meal_time: string;
   status?: string;
   meal?: { name?: string; dietary_tag?: string };
@@ -20,22 +34,8 @@ interface MealItem {
 interface OrderProgressStepperProps {
   status: string;
   orderId: string;
-  items?: MealItem[];
+  items?: OrderItem[];
 }
-
-const MEAL_ORDER: Record<string, number> = { morning: 0, afternoon: 1, dinner: 2 };
-const MEAL_ICONS: Record<string, string> = { morning: '🌅', afternoon: '☀️', dinner: '🌙' };
-const MEAL_LABELS: Record<string, string> = { morning: 'Breakfast', afternoon: 'Lunch', dinner: 'Dinner' };
-
-const STATUS_ICONS: Record<string, string> = {
-  delivered: '✓',
-  out_for_delivery: '🚚',
-  ready: '📦',
-  preparing: '🍳',
-  confirmed: '✓',
-  pending: '⏳',
-  cancelled: '✗',
-};
 
 function StepIcon({ stepKey, isCurrent }: { stepKey: string; isCurrent: boolean }) {
   if (stepKey === 'pending' && isCurrent) {
@@ -80,23 +80,44 @@ function StepIcon({ stepKey, isCurrent }: { stepKey: string; isCurrent: boolean 
   return null;
 }
 
+function MealSummaryDot({ mealStatus }: { mealStatus: string }) {
+  if (mealStatus === 'delivered') {
+    return (
+      <svg className="w-3.5 h-3.5 text-[#0A4828]" viewBox="0 0 24 24" fill="none">
+        <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  const colors: Record<string, string> = {
+    pending: 'bg-amber-400',
+    confirmed: 'bg-blue-400',
+    preparing: 'bg-orange-400',
+    ready: 'bg-indigo-400',
+    out_for_delivery: 'bg-purple-500',
+  };
+  return <span className={`w-2 h-2 rounded-full ${colors[mealStatus] || 'bg-gray-300'} animate-pulse`} />;
+}
+
 export default function OrderProgressStepper({ status, orderId, items }: OrderProgressStepperProps) {
   const confettiFired = useRef(false);
 
-  const sortedItems = items
-    ? [...items].sort((a, b) => (MEAL_ORDER[a.meal_time] ?? 9) - (MEAL_ORDER[b.meal_time] ?? 9))
-    : [];
-  const hasItems = sortedItems.length > 0;
-
-  const activeMeal = hasItems
-    ? sortedItems.find(i => (i.status || 'pending') !== 'delivered') || sortedItems[sortedItems.length - 1]
+  const mealItems = items
+    ? mealSlotOrder
+        .map(slot => {
+          const item = items.find(i => i.meal_time === slot);
+          if (!item) return null;
+          const timing = MEAL_TIMINGS[slot];
+          return { slot, label: timing.label, icon: timing.icon, status: item.status || 'pending', name: item.meal?.name };
+        })
+        .filter(Boolean) as { slot: MealSlot; label: string; icon: string; status: string; name?: string }[]
     : null;
-  const activeMealStatus = activeMeal ? (activeMeal.status || 'pending') : status;
-  const allDelivered = hasItems && sortedItems.every(i => (i.status || 'pending') === 'delivered');
-  const effectiveStatus = hasItems ? (allDelivered ? 'delivered' : activeMealStatus) : status;
+
+  const allDelivered = mealItems ? mealItems.every(m => m.status === 'delivered') : status === 'delivered';
+  const activeMeal = mealItems ? mealItems.find(m => m.status !== 'delivered') : null;
+  const activeStatus = activeMeal ? activeMeal.status : (allDelivered ? 'delivered' : status);
 
   useEffect(() => {
-    if (effectiveStatus === 'delivered' && !confettiFired.current) {
+    if (allDelivered && !confettiFired.current) {
       confettiFired.current = true;
       import('canvas-confetti').then(mod => {
         const confetti = mod.default;
@@ -108,9 +129,9 @@ export default function OrderProgressStepper({ status, orderId, items }: OrderPr
         });
       }).catch(() => {});
     }
-  }, [effectiveStatus]);
+  }, [allDelivered]);
 
-  if (effectiveStatus === 'cancelled') {
+  if (status === 'cancelled') {
     return (
       <div className="bg-red-50/90 border border-red-200 rounded-2xl p-6 flex items-center gap-4 shadow-sm">
         <div className="w-12 h-12 rounded-full bg-red-100 border border-red-300 flex items-center justify-center shrink-0">
@@ -127,57 +148,23 @@ export default function OrderProgressStepper({ status, orderId, items }: OrderPr
     );
   }
 
-  const activeIndex = STEPS.findIndex(s => s.key === effectiveStatus);
+  const activeIndex = STEPS.findIndex(s => s.key === activeStatus);
   const idx = activeIndex === -1 ? 0 : activeIndex;
   const progressPercent = idx <= 0 ? 0 : Math.round((idx / (STEPS.length - 1)) * 100);
 
   return (
     <div className="bg-white border border-[#E6DEC8] rounded-2xl p-6 md:p-8 shadow-sm">
-      {/* Meal summary line */}
-      {hasItems && (
-        <div className="flex items-center gap-3 sm:gap-4 pb-4 mb-4 border-b border-[#E6DEC8]/40">
-          {sortedItems.map(item => {
-            const itemStatus = item.status || 'pending';
-            const isDelivered = itemStatus === 'delivered';
-            const isActive = item === activeMeal && !allDelivered;
-            return (
-              <div
-                key={item.meal_time}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  isDelivered
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : isActive
-                    ? 'bg-[#0A4828] text-[#E3BA82] shadow-sm'
-                    : 'bg-stone-100 text-stone-500 border border-stone-200'
-                }`}
-              >
-                <span>{MEAL_ICONS[item.meal_time] || '🍽️'}</span>
-                <span>{MEAL_LABELS[item.meal_time] || item.meal_time}</span>
-                <span>{isDelivered ? '✓' : STATUS_ICONS[itemStatus] || '·'}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-6 border-b border-[#E6DEC8]/60">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-5 border-b border-[#E6DEC8]/60">
         <div>
           <div className="flex items-center gap-2.5">
             <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded bg-[#0A4828] text-[#E3BA82]">{orderId}</span>
             <span className="text-xs font-semibold text-stone-500">Live Meal Tracker</span>
           </div>
-          {hasItems && activeMeal && !allDelivered ? (
-            <h3 className="text-lg font-extrabold text-[#0A4828] mt-1">
-              {MEAL_ICONS[activeMeal.meal_time]} {MEAL_LABELS[activeMeal.meal_time]} — {STEPS[idx].label}
-              <span className="text-sm font-semibold text-stone-500 ml-1.5">({STEPS[idx].subtitle})</span>
-            </h3>
-          ) : (
-            <h3 className="text-lg font-extrabold text-[#0A4828] mt-1">
-              {STEPS[idx].label} — {STEPS[idx].subtitle}
-            </h3>
-          )}
+          <h3 className="text-lg font-extrabold text-[#0A4828] mt-1">
+            {activeMeal ? `${activeMeal.icon} ${activeMeal.label}` : ''} {STEPS[idx].label} — {STEPS[idx].subtitle}
+          </h3>
         </div>
-        {effectiveStatus !== 'delivered' ? (
+        {!allDelivered ? (
           <div className="bg-[#F9FAF8] border border-[#E6DEC8] px-4 py-2 rounded-xl text-right">
             <p className="text-[11px] uppercase tracking-wider font-semibold text-stone-400">Estimated Arrival</p>
             <p className="text-sm font-extrabold text-[#0A4828]">25–30 mins</p>
@@ -192,7 +179,29 @@ export default function OrderProgressStepper({ status, orderId, items }: OrderPr
         )}
       </div>
 
-      <div className="relative mt-8">
+      {/* Meal summary pills */}
+      {mealItems && mealItems.length > 1 && (
+        <div className="flex flex-wrap items-center gap-3 pt-4 pb-2">
+          {mealItems.map((meal, i) => {
+            const isActive = activeMeal?.slot === meal.slot;
+            return (
+              <div key={meal.slot} className="flex items-center gap-1.5">
+                {i > 0 && <span className="text-stone-300 mr-1">·</span>}
+                <span className="text-sm">{meal.icon}</span>
+                <span className={`text-xs font-bold ${isActive ? 'text-[#0A4828]' : meal.status === 'delivered' ? 'text-stone-600' : 'text-stone-400'}`}>
+                  {meal.label}
+                </span>
+                <MealSummaryDot mealStatus={meal.status} />
+                <span className={`text-[10px] font-semibold ${meal.status === 'delivered' ? 'text-green-700' : isActive ? 'text-[#0A4828]' : 'text-stone-400'}`}>
+                  {statusLabels[meal.status] || meal.status}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="relative mt-6">
         {/* Progress track (desktop only) */}
         <div className="hidden md:block absolute top-6 left-8 right-8 h-1 bg-stone-200 rounded-full" />
         <div

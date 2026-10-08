@@ -178,6 +178,7 @@ export interface OrderItem {
   meal_time: MealTime;
   quantity: number;
   unit_price: number;
+  status?: string;
   meal?: Meal;
 }
 
